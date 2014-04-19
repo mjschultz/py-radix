@@ -27,7 +27,7 @@ The C extension will be built for supported python versions. If you do not
 want the C extension, set the environment variable ``RADIX_NO_EXT=1``.
 
 Tests are in the ``tests/`` directory and can be run with
-``python setup.py test``.
+``python setup.py nosetests``.
 
 Usage
 -----
@@ -119,7 +119,8 @@ directly to me <mjschultz@gmail.com>.
 The main portions of the directory tree are as follows: ::
 
     .
-    ├── radix/    # Pure Python code
-    ├── lib/      # C extension code (compatible with pure python code)
-    ├── tests/    # Tests (regression and unit)
-    └── setup.py  # Standard setup.py for installation/testing/etc.
+    ├── radix/*.py      # Pure Python code
+    ├── radix/_radix.c  # C extension code (compatible with pure python code)
+    ├── radix/_radix/*  # C extension code (compatible with pure python code)
+    ├── tests/          # Tests (regression and unit)
+    └── setup.py        # Standard setup.py for installation/testing/etc.
