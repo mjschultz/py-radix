@@ -1,26 +1,35 @@
-py-radix is an implementation of a radix tree data structure for the storage 
-and retrieval of IPv4 and IPv6 network prefixes.
+py-radix
+========
 
-The radix tree is the data structure most commonly used for routing table 
-lookups. It efficiently stores network prefixes of varying lengths and 
-allows fast lookups of containing networks.
+.. image:: https://travis-ci.org/mjschultz/py-radix.svg?branch=master
+   :target: https://travis-ci.org/mjschultz/py-radix
 
-To install, use the standard Python distutils incantation:
+py-radix implements the radix tree data structure for the storage and
+retrieval of IPv4 and IPv6 network prefixes.
+
+The radix tree is commonly used for routing table lookups. It efficiently
+stores network prefixes of varying lengths and allows fast lookups of
+containing networks.
+
+Installation
+------------
+
+Installation is a breeze via pip: ::
+
+    pip install py-radix
+
+Or with the standard Python distutils incantation: ::
 
 	python setup.py build
 	python setup.py install
 
-Regression tests are in the test.py file.
+Tests are in the ``tests/`` directory and can be run with
+``python setup.py test``.
 
-py-radix is licensed under a ISC/BSD licence. The underlying radix tree 
-implementation is taken (and modified) from MRTd and is subject to a 4-term 
-BSD license. See the LICENSE file for details.
+Usage
+-----
 
-Please report bugs to Damien Miller <djm@mindrot.org>. Please check the TODO
-file first, in case your problem is something I already know about (please
-send patches!)
-
-A simple example that demonstrates most of the features:
+A simple example that demonstrates most of the features: ::
 
 	import radix
 
@@ -90,4 +99,24 @@ A simple example that demonstrates most of the features:
   		print rnode.prefix
 
 
-$Id: README,v 1.12 2004/11/24 20:46:18 djm Exp $
+License
+-------
+
+py-radix is licensed under a ISC/BSD licence. The underlying radix tree 
+implementation is taken (and modified) from MRTd and is subject to a 4-term 
+BSD license. See the LICENSE file for details.
+
+Contributing
+------------
+
+Please report bugs via GitHub at https://github.com/mjschultz/py-radix/issues.
+Code changes can be contributed through a pull request on GitHub or emailed
+directly to me <mjschultz@gmail.com>.
+
+The main portions of the directory tree are as follows: ::
+
+    .
+    ├── radix/    # Pure Python code
+    ├── lib/      # C extension code (compatible with pure python code)
+    ├── tests/    # Tests (regression and unit)
+    └── setup.py  # Standard setup.py for installation/testing/etc.

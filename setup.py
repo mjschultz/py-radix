@@ -1,49 +1,58 @@
 #!/usr/bin/env python
 
-# Copyright (c) 2004 Damien Miller <djm@mindrot.org>
-#
-# Permission to use, copy, modify, and distribute this software for any
-# purpose with or without fee is hereby granted, provided that the above
-# copyright notice and this permission notice appear in all copies.
-#
-# THE SOFTWARE IS PROVIDED "AS IS" AND THE AUTHOR DISCLAIMS ALL WARRANTIES
-# WITH REGARD TO THIS SOFTWARE INCLUDING ALL IMPLIED WARRANTIES OF
-# MERCHANTABILITY AND FITNESS. IN NO EVENT SHALL THE AUTHOR BE LIABLE FOR
-# ANY SPECIAL, DIRECT, INDIRECT, OR CONSEQUENTIAL DAMAGES OR ANY DAMAGES
-# WHATSOEVER RESULTING FROM LOSS OF USE, DATA OR PROFITS, WHETHER IN AN
-# ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT OF
-# OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
+import codecs
+import re
 
-# $Id: setup.py,v 1.7 2007/12/18 00:53:53 djm Exp $
+from setuptools import setup, find_packages, Extension
+from os.path import abspath, dirname, join
 
-import sys
-from distutils.core import setup, Extension
+here = abspath(dirname(__file__))
 
-VERSION = "0.5"
 
-if __name__ == '__main__':
-	libs = []
-	src = [ 'radix.c', 'radix_python.c' ]
-	if sys.platform == 'win32':
-		libs += [ 'ws2_32' ]
-		src += [ 'inet_ntop.c', 'strlcpy.c' ]
-	radix = Extension('radix', libraries = libs, sources = src)
-	setup(	name = "py-radix",
-		version = VERSION,
-		author = "Damien Miller",
-		author_email = "djm@mindrot.org",
-        maintainer = "Michael J Schultz",
-        maintainer_email = "mjschultz@gmail.com",
-		url = "http://www.mindrot.org/py-radix.html",
-		description = "Radix tree implementation",
-		long_description = """\
-py-radix is an implementation of a radix tree data structure for the storage 
-and retrieval of IPv4 and IPv6 network prefixes.
+# Read the version number from a source file.
+def find_version(*file_paths):
+    # Open in Latin-1 so that we avoid encoding errors.
+    # Use codecs.open for Python 2 compatibility
+    with codecs.open(join(here, *file_paths), 'r', 'latin1') as f:
+        version_file = f.read()
 
-The radix tree is the data structure most commonly used for routing table 
-lookups. It efficiently stores network prefixes of varying lengths and 
-allows fast lookups of containing networks.
-""",
-		license = "BSD",
-		ext_modules = [radix]
-	     )
+    # The version line must have the form
+    # __version__ = 'ver'
+    version_re = re.compile(r"^__version__ = ['\"]([^'\"]*)['\"]", re.M)
+    version_match = version_re.search(version_file)
+    if version_match:
+        return version_match.group(1)
+    raise RuntimeError("Unable to find version string.")
+
+
+with codecs.open(join(here, 'README.rst'), encoding='utf-8') as f:
+    README = f.read()
+
+sources = ['radix/_radix.c', 'radix/_radix/radix.c']
+radix = Extension('radix._radix', sources=sources)
+
+
+setup(
+    name='py-radix',
+    version=find_version('radix', '__init__.py'),
+    maintainer='Michael J. Schultz',
+    maintainer_email='mjschultz@gmail.com',
+    url='https://github.com/mjschultz/py-radix',
+    description='Radix tree implementation',
+    long_description=README,
+    license='BSD',
+    keywords='radix tree trie python routing networking',
+    classifiers=[
+        'Intended Audience :: Developers',
+        'Topic :: Software Development :: Libraries :: Python Modules',
+        'Topic :: System :: Networking',
+        'License :: OSI Approved :: BSD License',
+        'Programming Language :: Python :: 2',
+        'Programming Language :: Python :: 2.6',
+        'Programming Language :: Python :: 2.7',
+    ],
+    setup_requires=['nose', 'coverage'],
+    packages=find_packages(exclude=['tests', 'tests.*']),
+    ext_modules=[radix],
+    test_suite='nose.collector',
+)
