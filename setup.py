@@ -50,6 +50,8 @@ setup(
         'Programming Language :: Python :: 2',
         'Programming Language :: Python :: 2.7',
     ],
-    packages=find_packages(exclude=['tests']),
-    ext_modules=[radix]
+    setup_requires=['nose', 'coverage'],
+    packages=find_packages(exclude=['tests', 'tests.*']),
+    ext_modules=[radix],
+    test_suite='nose.collector',
 )
