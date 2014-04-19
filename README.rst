@@ -11,21 +11,22 @@ containing networks.
 Installation
 ------------
 
-Installation is a breeze via pip:
+Installation is a breeze via pip: ::
 
     pip install py-radix
 
-Or with the standard Python distutils incantation:
+Or with the standard Python distutils incantation: ::
 
 	python setup.py build
 	python setup.py install
 
-Tests are in the `tests/` directory and can be run with `python setup.py test`.
+Tests are in the ``tests/`` directory and can be run with
+``python setup.py test``.
 
 Usage
 -----
 
-A simple example that demonstrates most of the features:
+A simple example that demonstrates most of the features: ::
 
 	import radix
 
@@ -109,7 +110,7 @@ Please report bugs via GitHub at https://github.com/mjschultz/py-radix/issues.
 Code changes can be contributed through a pull request on GitHub or emailed
 directly to me <mjschultz@gmail.com>.
 
-The main portions of the directory tree are as follows:
+The main portions of the directory tree are as follows: ::
 
     .
     ├── radix/    # Pure Python code
