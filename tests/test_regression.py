@@ -14,25 +14,43 @@
 # ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT OF
 # OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
 
-# $Id: test.py,v 1.15 2007/12/18 00:53:53 djm Exp $
+# $Id$
 
+import sys
 import radix
 import unittest
 import socket
+import struct
 import pickle
-import cPickle
+if sys.version_info[0] >= 3:
+    # for Py3K
+    t00_class_name = "<class '_radix.Radix'>"
+    t01_node_name = "<class '_radix.RadixNode'>"
+    t14_packed_addr = struct.pack('4B', 0xe0, 0x14, 0x0b, 0x40)
+    t15_packed_addr = struct.pack(
+        '16B',
+        0xde, 0xad, 0xbe, 0xef, 0x12, 0x34, 0x56, 0x78,
+        0x9a, 0xbc, 0xde, 0xf0, 0x00, 0x00, 0x00, 0x00)
+else:
+    # for 2.x
+    import cPickle
+    t00_class_name = "<type '_radix.Radix'>"
+    t01_node_name = "<type '_radix.RadixNode'>"
+    t14_packed_addr = '\xe0\x14\x0b@'
+    t15_packed_addr = ('\xde\xad\xbe\xef\x124Vx'
+                       '\x9a\xbc\xde\xf0\x00\x00\x00\x00')
 
 
 class TestRadix(unittest.TestCase):
     def test_00__create_destroy(self):
         tree = radix.Radix()
-        self.assertEqual(str(type(tree)), "<type '_radix.Radix'>")
+        self.assertEqual(str(type(tree)), t00_class_name)
         del tree
 
     def test_01__create_node(self):
         tree = radix.Radix()
         node = tree.add("10.0.0.0/8")
-        self.assertEqual(str(type(node)), "<type '_radix.RadixNode'>")
+        self.assertEqual(str(type(node)), t01_node_name)
         self.assertEqual(node.prefix, "10.0.0.0/8")
         self.assertEqual(node.network, "10.0.0.0")
         self.assertEqual(node.prefixlen, 8)
@@ -127,7 +145,7 @@ class TestRadix(unittest.TestCase):
         for prefix in prefixes:
             tree.add(prefix)
         nodes = tree.nodes()
-        addrs = map(lambda x: x.prefix, nodes)
+        addrs = list(map(lambda x: x.prefix, nodes))
         addrs.sort()
         self.assertEqual(addrs, prefixes)
 
@@ -183,7 +201,7 @@ class TestRadix(unittest.TestCase):
 
     def test_14__packed_addresses4(self):
         tree = radix.Radix()
-        p = '\xe0\x14\x0b@'
+        p = struct.pack('4B', 0xe0, 0x14, 0x0b, 0x40)
         node = tree.add(packed=p, masklen=26)
         self.assertEquals(node.family, socket.AF_INET)
         self.assertEquals(node.prefix, "224.20.11.64/26")
@@ -191,10 +209,15 @@ class TestRadix(unittest.TestCase):
 
     def test_15__packed_addresses6(self):
         tree = radix.Radix()
-        p = '\xde\xad\xbe\xef\x124Vx\x9a\xbc\xde\xf0\x00\x00\x00\x00'
+        p = struct.pack(
+            '16B',
+            0xde, 0xad, 0xbe, 0xef, 0x12, 0x34, 0x56, 0x78,
+            0x9a, 0xbc, 0xde, 0xf0, 0x00, 0x00, 0x00, 0x00)
         node = tree.add(packed=p, masklen=108)
         self.assertEquals(node.family, socket.AF_INET6)
-        self.assertEquals(node.prefix, "dead:beef:1234:5678:9abc:def0::/108")
+        self.assertEquals(
+            node.prefix,
+            "dead:beef:1234:5678:9abc:def0::/108")
         self.assertEquals(node.packed, p)
 
     def test_16__bad_addresses(self):
@@ -252,8 +275,10 @@ class TestRadix(unittest.TestCase):
         prefixes.sort()
         for prefix in prefixes:
             tree.add(prefix)
-        self.assertRaises(
-            RuntimeWarning, map, lambda x: tree.delete(x.prefix), tree)
+
+        def iter_mod(t):
+            [t.delete(x.prefix) for x in t]
+        self.assertRaises(RuntimeWarning, iter_mod, tree)
 
     def test_21__lots_of_prefixes(self):
         tree = radix.Radix()
@@ -283,7 +308,9 @@ class TestRadix(unittest.TestCase):
             num_nodes_out += 1
 
         self.assertEquals(num_nodes_in - num_nodes_del, num_nodes_out)
-        self.assertEquals(num_nodes_in - num_nodes_del, len(tree.nodes()))
+        self.assertEquals(
+            num_nodes_in - num_nodes_del,
+            len(tree.nodes()))
 
     def test_22__broken_sanitise(self):
         tree = radix.Radix()
@@ -316,6 +343,8 @@ class TestRadix(unittest.TestCase):
         self.assertEquals(len(tree2.nodes()), num_nodes_in)
 
     def test_21__cpickle(self):
+        if sys.version_info[0] >= 3:
+            return
         tree = radix.Radix()
         num_nodes_in = 0
         for i in range(0, 128):
@@ -339,6 +368,15 @@ class TestRadix(unittest.TestCase):
                 self.assertEquals(node.data["j"], j)
                 node.data["j"] = j
         self.assertEquals(len(tree2.nodes()), num_nodes_in)
+
+    def test_22_search_best(self):
+        tree = radix.Radix()
+        tree.add('10.0.0.0/8')
+        tree.add('10.0.0.0/13')
+        tree.add('10.0.0.0/16')
+        self.assertEquals(
+            tree.search_best('10.0.0.0/15').prefix,
+            '10.0.0.0/13')
 
 
 def main():

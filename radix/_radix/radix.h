@@ -55,7 +55,7 @@
  * OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
  */
 
-/* $Id: radix.h,v 1.9 2007/10/24 06:03:08 djm Exp $ */
+/* $Id$ */
 
 #ifndef _RADIX_H
 #define _RADIX_H
@@ -73,9 +73,9 @@
 
 #if defined(_MSC_VER)
 # define snprintf _snprintf
-typedef unsigned __int8		u_int8_t;
-typedef unsigned __int16	u_int16_t;
-typedef unsigned __int32	u_int32_t;
+typedef unsigned __int8         u_int8_t;
+typedef unsigned __int16        u_int16_t;
+typedef unsigned __int32        u_int32_t;
 const char *inet_ntop(int af, const void *src, char *dst, size_t size);
 size_t strlcpy(char *dst, const char *src, size_t size);
 #endif
@@ -85,13 +85,13 @@ size_t strlcpy(char *dst, const char *src, size_t size);
  * $MRTId: mrt.h,v 1.1.1.1 2000/08/14 18:46:10 labovit Exp $
  */
 typedef struct _prefix_t {
-	u_int family;			/* AF_INET | AF_INET6 */
-	u_int bitlen;			/* same as mask? */
-	int ref_count;			/* reference count */
-	union {
-		struct in_addr sin;
-		struct in6_addr sin6;
-	} add;
+        u_int family;                   /* AF_INET | AF_INET6 */
+        u_int bitlen;                   /* same as mask? */
+        int ref_count;                  /* reference count */
+        union {
+                struct in_addr sin;
+                struct in6_addr sin6;
+        } add;
 } prefix_t;
 
 void Deref_Prefix(prefix_t *prefix);
@@ -101,17 +101,17 @@ void Deref_Prefix(prefix_t *prefix);
  * $MRTId: radix.h,v 1.1.1.1 2000/08/14 18:46:10 labovit Exp $
  */
 typedef struct _radix_node_t {
-	u_int bit;			/* flag if this node used */
-	prefix_t *prefix;		/* who we are in radix tree */
-	struct _radix_node_t *l, *r;	/* left and right children */
-	struct _radix_node_t *parent;	/* may be used */
-	void *data;			/* pointer to data */
+        u_int bit;                      /* flag if this node used */
+        prefix_t *prefix;               /* who we are in radix tree */
+        struct _radix_node_t *l, *r;    /* left and right children */
+        struct _radix_node_t *parent;   /* may be used */
+        void *data;                     /* pointer to data */
 } radix_node_t;
 
 typedef struct _radix_tree_t {
-	radix_node_t *head;
-	u_int maxbits;			/* for IP, 32 bit addresses */
-	int num_active_node;		/* for debug purpose */
+        radix_node_t *head;
+        u_int maxbits;                  /* for IP, 32 bit addresses */
+        int num_active_node;            /* for debug purpose */
 } radix_tree_t;
 
 /* Type of callback function */
@@ -128,28 +128,28 @@ void radix_process(radix_tree_t *radix, rdx_cb_t func, void *cbctx);
 #define RADIX_MAXBITS 128
 
 #define RADIX_WALK(Xhead, Xnode) \
-	do { \
-		radix_node_t *Xstack[RADIX_MAXBITS+1]; \
-		radix_node_t **Xsp = Xstack; \
-		radix_node_t *Xrn = (Xhead); \
-		while ((Xnode = Xrn)) { \
-			if (Xnode->prefix)
+        do { \
+                radix_node_t *Xstack[RADIX_MAXBITS+1]; \
+                radix_node_t **Xsp = Xstack; \
+                radix_node_t *Xrn = (Xhead); \
+                while ((Xnode = Xrn)) { \
+                        if (Xnode->prefix)
 
 #define RADIX_WALK_END \
-			if (Xrn->l) { \
-				if (Xrn->r) { \
-					*Xsp++ = Xrn->r; \
-				} \
-				Xrn = Xrn->l; \
-			} else if (Xrn->r) { \
-				Xrn = Xrn->r; \
-			} else if (Xsp != Xstack) { \
-				Xrn = *(--Xsp); \
-			} else { \
-				Xrn = (radix_node_t *) 0; \
-			} \
-		} \
-	} while (0)
+                        if (Xrn->l) { \
+                                if (Xrn->r) { \
+                                        *Xsp++ = Xrn->r; \
+                                } \
+                                Xrn = Xrn->l; \
+                        } else if (Xrn->r) { \
+                                Xrn = Xrn->r; \
+                        } else if (Xsp != Xstack) { \
+                                Xrn = *(--Xsp); \
+                        } else { \
+                                Xrn = (radix_node_t *) 0; \
+                        } \
+                } \
+        } while (0)
 
 /* Local additions */
 
