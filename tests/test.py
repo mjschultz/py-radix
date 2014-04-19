@@ -26,13 +26,13 @@ import cPickle
 class TestRadix(unittest.TestCase):
     def test_00__create_destroy(self):
         tree = radix.Radix()
-        self.assertEqual(str(type(tree)), "<type 'radix.Radix'>")
+        self.assertEqual(str(type(tree)), "<type '_radix.Radix'>")
         del tree
 
     def test_01__create_node(self):
         tree = radix.Radix()
         node = tree.add("10.0.0.0/8")
-        self.assertEqual(str(type(node)), "<type 'radix.RadixNode'>")
+        self.assertEqual(str(type(node)), "<type '_radix.RadixNode'>")
         self.assertEqual(node.prefix, "10.0.0.0/8")
         self.assertEqual(node.network, "10.0.0.0")
         self.assertEqual(node.prefixlen, 8)
@@ -111,7 +111,6 @@ class TestRadix(unittest.TestCase):
     def test_06__deletes(self):
         tree = radix.Radix()
         node1 = tree.add("10.0.0.0/8")
-        tree.delete("10.0.0.0/24")
         self.assertRaises(KeyError, tree.delete, "127.0.0.1")
         self.assertRaises(KeyError, tree.delete, "10.0.0.0/24")
         node = tree.search_best("10.0.0.10")
@@ -203,7 +202,6 @@ class TestRadix(unittest.TestCase):
         self.assertRaises(TypeError, tree.add)
         self.assertRaises(ValueError, tree.add, "blah/32")
         self.assertRaises(ValueError, tree.add, "blah", 32)
-        print 'd'
         self.assertRaises(ValueError, tree.add, "127.0.0.1", -2)
         self.assertRaises(ValueError, tree.add, "127.0.0.1", 64)
         self.assertRaises(ValueError, tree.add, "::", -2)

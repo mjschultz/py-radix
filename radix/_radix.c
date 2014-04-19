@@ -16,7 +16,7 @@
 
 #include "Python.h"
 #include "structmember.h"
-#include "radix.h"
+#include "_radix/radix.h"
 
 /* Prototypes */
 struct _RadixObject;
@@ -114,7 +114,7 @@ static PyTypeObject RadixNode_Type = {
 	 * to be portable to Windows without using C++. */
 	PyObject_HEAD_INIT(NULL)
 	0,			/*ob_size*/
-	"radix.RadixNode",	/*tp_name*/
+	"_radix.RadixNode",	/*tp_name*/
 	sizeof(RadixNodeObject),/*tp_basicsize*/
 	0,			/*tp_itemsize*/
 	/* methods */
@@ -651,7 +651,7 @@ static PyTypeObject Radix_Type = {
 	 * to be portable to Windows without using C++. */
 	PyObject_HEAD_INIT(NULL)
 	0,			/*ob_size*/
-	"radix.Radix",		/*tp_name*/
+	"_radix.Radix",		/*tp_name*/
 	sizeof(RadixObject),	/*tp_basicsize*/
 	0,			/*tp_itemsize*/
 	/* methods */
@@ -789,7 +789,7 @@ static PyTypeObject RadixIter_Type = {
 	 * to be portable to Windows without using C++. */
 	PyObject_HEAD_INIT(NULL)
 	0,			/*ob_size*/
-	"radix.RadixIter",	/*tp_name*/
+	"_radix.RadixIter",	/*tp_name*/
 	sizeof(RadixIterObject),/*tp_basicsize*/
 	0,			/*tp_itemsize*/
 	/* methods */
@@ -935,7 +935,7 @@ PyDoc_STRVAR(module_doc,
 "  		print rnode.prefix\n"
 );
 
-PyMODINIT_FUNC initradix(void) {
+PyMODINIT_FUNC init_radix(void) {
 	PyObject *m, *d;
 
 	if (PyType_Ready(&Radix_Type) < 0) {
@@ -945,7 +945,7 @@ PyMODINIT_FUNC initradix(void) {
 		return;
     }
 
-	m = Py_InitModule3("radix", radix_methods, module_doc);
+	m = Py_InitModule3("_radix", radix_methods, module_doc);
 
 	/* Stash the callable constructor for use in Radix.__reduce__ */
 	d = PyModule_GetDict(m);
