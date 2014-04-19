@@ -1,6 +1,9 @@
 py-radix
 ========
 
+.. image:: https://travis-ci.org/mjschultz/py-radix.svg?branch=master
+   :target: https://travis-ci.org/mjschultz/py-radix
+
 py-radix implements the radix tree data structure for the storage and
 retrieval of IPv4 and IPv6 network prefixes.
 
