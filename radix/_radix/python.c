@@ -18,8 +18,6 @@
 #include "structmember.h"
 #include "radix.h"
 
-/* $Id: radix_python.c,v 1.30 2007/12/18 02:49:01 djm Exp $ */
-
 /* Prototypes */
 struct _RadixObject;
 struct _RadixIterObject;
@@ -842,16 +840,16 @@ PyDoc_STRVAR(radix_Radix_doc,
 \n\
 Instantiate a new radix tree object.");
 
-static PyObject *
-radix_Radix(PyObject *self, PyObject *args)
-{
+static PyObject * radix_Radix(PyObject *self, PyObject *args) {
 	RadixObject *rv;
 
-	if (!PyArg_ParseTuple(args, ":Radix"))
+	if (!PyArg_ParseTuple(args, ":Radix")) {
 		return NULL;
+    }
 	rv = newRadixObject();
-	if (rv == NULL)
+	if (rv == NULL) {
 		return NULL;
+    }
 	return (PyObject *)rv;
 }
 
@@ -937,52 +935,21 @@ PyDoc_STRVAR(module_doc,
 "  		print rnode.prefix\n"
 );
 
-#if defined(_MSC_VER)
-static void cleanupradix(void)
-{
-	WSACleanup();
-}
-#endif
-
-PyMODINIT_FUNC
-initradix(void)
-{
+PyMODINIT_FUNC initradix(void) {
 	PyObject *m, *d;
-#if defined(_MSC_VER)
-	WSADATA winsock_data;
-	int r;
-	char errbuf[256];
 
-	r = WSAStartup(0x0202, &winsock_data);
-	switch (r) {
-	case 0:
-		Py_AtExit(cleanupradix);
-		break;
-	case WSASYSNOTREADY:
-		PyErr_SetString(PyExc_ImportError, "Winsock error: "
-		    "network subsystem not ready");
+	if (PyType_Ready(&Radix_Type) < 0) {
 		return;
-	case WSAEINVAL:
-	case WSAVERNOTSUPPORTED:
-		PyErr_SetString(PyExc_ImportError, "Winsock error: "
-		    "required winsock version 2.2 not supported");
+    }
+	if (PyType_Ready(&RadixNode_Type) < 0) {
 		return;
-	default:
-		snprintf(errbuf, sizeof(errbuf), "Winsock error: code %d", r);
-		PyErr_SetString(PyExc_ImportError, errbuf);
-		return;
-	}
-#endif
+    }
 
-	if (PyType_Ready(&Radix_Type) < 0)
-		return;
-	if (PyType_Ready(&RadixNode_Type) < 0)
-		return;
 	m = Py_InitModule3("radix", radix_methods, module_doc);
 
 	/* Stash the callable constructor for use in Radix.__reduce__ */
 	d = PyModule_GetDict(m);
 	radix_constructor = PyDict_GetItemString(d, "Radix");
 
-	PyModule_AddStringConstant(m, "__version__", "0.4");
+	PyModule_AddIntConstant(m, "__accelerator__", 1);
 }

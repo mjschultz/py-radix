@@ -203,6 +203,7 @@ class TestRadix(unittest.TestCase):
         self.assertRaises(TypeError, tree.add)
         self.assertRaises(ValueError, tree.add, "blah/32")
         self.assertRaises(ValueError, tree.add, "blah", 32)
+        print 'd'
         self.assertRaises(ValueError, tree.add, "127.0.0.1", -2)
         self.assertRaises(ValueError, tree.add, "127.0.0.1", 64)
         self.assertRaises(ValueError, tree.add, "::", -2)
