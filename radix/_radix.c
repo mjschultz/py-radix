@@ -1006,7 +1006,7 @@ static PyObject *module_initialize(void)
 }
 
 #if PY_MAJOR_VERSION >= 3
-PyMODINIT_FUNC PyInit_radix(void)
+PyMODINIT_FUNC PyInit__radix(void)
 {
         return module_initialize();
 }

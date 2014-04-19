@@ -12,7 +12,6 @@ here = abspath(dirname(__file__))
 
 # determine the python version
 IS_PYPY = hasattr(sys, 'pypy_version_info')
-IS_PY3K = (sys.version_info.major == 3)
 RADIX_NO_EXT = os.environ.get('RADIX_NO_EXT', False)
 
 
@@ -37,7 +36,7 @@ with codecs.open(join(here, 'README.rst'), encoding='utf-8') as f:
 
 # introduce some extra setup_args if Python 2.x
 extra_kwargs = {}
-if not IS_PYPY and not IS_PY3K and not RADIX_NO_EXT:
+if not IS_PYPY and not RADIX_NO_EXT:
     sources = ['radix/_radix.c', 'radix/_radix/radix.c']
     radix = Extension('radix._radix', sources=sources)
     extra_kwargs['ext_modules'] = [radix]
@@ -61,6 +60,9 @@ setup(
         'Programming Language :: Python :: 2',
         'Programming Language :: Python :: 2.6',
         'Programming Language :: Python :: 2.7',
+        'Programming Language :: Python :: 3',
+        'Programming Language :: Python :: 3.2',
+        'Programming Language :: Python :: 3.3',
     ],
     setup_requires=['nose', 'coverage'],
     packages=find_packages(exclude=['tests', 'tests.*']),
