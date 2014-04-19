@@ -23,6 +23,9 @@ Or with the standard Python distutils incantation: ::
 	python setup.py build
 	python setup.py install
 
+The C extension will be built for supported python versions. If you do not
+want the C extension, set the environment variable ``RADIX_NO_EXT=1``.
+
 Tests are in the ``tests/`` directory and can be run with
 ``python setup.py test``.
 

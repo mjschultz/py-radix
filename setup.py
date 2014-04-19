@@ -2,11 +2,18 @@
 
 import codecs
 import re
+import sys
+import os
 
 from setuptools import setup, find_packages, Extension
 from os.path import abspath, dirname, join
 
 here = abspath(dirname(__file__))
+
+# determine the python version
+IS_PYPY = hasattr(sys, 'pypy_version_info')
+IS_PY3K = (sys.version_info.major == 3)
+RADIX_NO_EXT = os.environ.get('RADIX_NO_EXT', False)
 
 
 # Read the version number from a source file.
@@ -28,8 +35,12 @@ def find_version(*file_paths):
 with codecs.open(join(here, 'README.rst'), encoding='utf-8') as f:
     README = f.read()
 
-sources = ['radix/_radix.c', 'radix/_radix/radix.c']
-radix = Extension('radix._radix', sources=sources)
+# introduce some extra setup_args if Python 2.x
+extra_kwargs = {}
+if not IS_PYPY and not IS_PY3K and not RADIX_NO_EXT:
+    sources = ['radix/_radix.c', 'radix/_radix/radix.c']
+    radix = Extension('radix._radix', sources=sources)
+    extra_kwargs['ext_modules'] = [radix]
 
 
 setup(
@@ -53,6 +64,6 @@ setup(
     ],
     setup_requires=['nose', 'coverage'],
     packages=find_packages(exclude=['tests', 'tests.*']),
-    ext_modules=[radix],
     test_suite='nose.collector',
+    **extra_kwargs
 )
