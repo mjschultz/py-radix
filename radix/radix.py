@@ -1,4 +1,5 @@
-from socket import getaddrinfo, inet_pton, inet_ntop, AF_INET, AF_INET6
+from socket import (getaddrinfo, gaierror,
+                    inet_pton, inet_ntop, AF_INET, AF_INET6)
 
 
 class RadixPrefix(object):
@@ -8,14 +9,14 @@ class RadixPrefix(object):
 
     def __init__(self, network=None, masklen=None, packed=None):
         if network and packed:
-            raise Exception('Two address types specified. Please pick one.')
+            raise ValueError('Two address types specified. Please pick one.')
         if network is None and packed is None:
-            raise Exception('No address specified (use `address` or `packed`)')
+            raise TypeError('No address specified (use `address` or `packed`)')
 
         if network:
             self._from_network(network, masklen)
         elif packed:
-            self._from_blob(packed, masklen)
+            self._from_packed(packed, masklen)
 
     def __str__(self):
         return '{}/{}'.format(inet_ntop(self.family, self.addr), self.bitlen)
@@ -25,42 +26,45 @@ class RadixPrefix(object):
         if len(split) > 1:
             # network has prefix in it
             if masklen:
-                raise Exception('masklen specified twice')
+                raise ValueError('masklen specified twice')
             network = split[0]
             masklen = int(split[1])
         else:
             network = split[0]
-        family, _, _, _, sockaddr = getaddrinfo(network, None)[0]
+        try:
+            family, _, _, _, sockaddr = getaddrinfo(network, None)[0]
+        except gaierror as e:
+            raise ValueError(e.message)
         if family == AF_INET:
             if masklen is None:
                 masklen = 32
             if not (0 <= masklen <= 32):
-                raise Exception('invalid prefix length')
+                raise ValueError('invalid prefix length')
         elif family == AF_INET6:
             if masklen is None:
                 masklen = 128
             if not (0 <= masklen <= 128):
-                raise Exception('invalid prefix length')
+                raise ValueError('invalid prefix length')
         else:
             return
         self.bitlen = masklen
         self.addr = inet_pton(family, sockaddr[0])
         self.family = family
 
-    def _from_blob(self, packed, masklen):
+    def _from_packed(self, packed, masklen):
         packed_len = len(packed)
         if packed_len == 4:
             self.family = AF_INET
             if masklen is None:
                 masklen = 32
             if not (0 <= masklen <= 32):
-                raise Exception('invalid prefix length')
+                raise ValueError('invalid prefix length')
         elif packed_len == 16:
             self.family = AF_INET6
             if masklen is None:
                 masklen = 128
             if not (0 <= masklen <= 128):
-                raise Exception('invalid prefix length')
+                raise ValueError('invalid prefix length')
         else:
             return
         self.addr = packed
@@ -236,8 +240,10 @@ class RadixNode(object):
         self.prefix = prefix
         if prefix:
             self.bitlen = prefix.bitlen
+            self.family = prefix.family
         else:
             self.bitlen = prefix_size
+            self.family = None
         self.parent = parent
         self.left = left
         self.right = right
