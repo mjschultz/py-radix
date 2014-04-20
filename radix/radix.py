@@ -166,6 +166,69 @@ class RadixTree(object):
             node.parent = glue_node
         return new_node
 
+    def search_best(self, prefix):
+        if self.head is None:
+            return None
+        node = self.head
+        addr = node.prefix.addr
+        bitlen = node.bitlen
+
+        stack = []
+        while node.bitlen < bitlen:
+            if node.prefix:
+                stack.append(node)
+            if self._addr_test(addr, node.bitlen):
+                node = node.right
+            else:
+                node = node.left
+            if node is None:
+                break
+        if node and node.prefix:
+            stack.append(node)
+        if len(stack) <= 0:
+            return None
+        for node in stack[::-1]:
+            if (self._prefix_match(node.prefix, prefix, bitlen) and
+                    node.prefix.bitlen <= bitlen):
+                return node
+        return None
+
+    def search_exact(self, prefix):
+        if self.head is None:
+            return None
+        node = self.head
+        addr = node.prefix.addr
+        bitlen = node.bitlen
+
+        while node.bitlen < bitlen:
+            if self._addr_test(addr, node.bitlen):
+                node = node.right
+            else:
+                node = node.left
+            if node is None:
+                return None
+
+        if node.bitlen > bitlen or node.prefix is None:
+            return None
+
+        if self._prefix_match(node.prefix, prefix, bitlen):
+            return node
+        return None
+
+    def _prefix_match(self, left, right, bitlen):
+        l = left.addr
+        r = right.addr
+        quotient, remainder = divmod(bitlen, 8)
+        if l[:quotient] != r[:quotient]:
+            return False
+        lp = ord(l[quotient+1])
+        rp = ord(r[quotient+1])
+        for i in xrange(remainder):
+            mask = 1 << (8 - i)
+            if lp & mask != rp & mask:
+                return False
+        return True
+
 
 class RadixNode(object):
     def __init__(self, prefix=None, prefix_size=None, data=None,
@@ -197,11 +260,21 @@ class Radix(object):
     def delete(self):
         pass
 
-    def search_exact(self):
-        pass
+    def search_exact(self, network=None, masklen=None, packed=None):
+        prefix = RadixPrefix(network, masklen, packed)
+        node = self._tree.search_exact(prefix)
+        if node and node.data is not None:
+            return node
+        else:
+            return None
 
-    def search_best(self):
-        pass
+    def search_best(self, network=None, masklen=None, packed=None):
+        prefix = RadixPrefix(network, masklen, packed)
+        node = self._tree.search_best(prefix)
+        if node and node.data is not None:
+            return node
+        else:
+            return None
 
     def _iter(self, attr=None):
         node = self._tree.head
