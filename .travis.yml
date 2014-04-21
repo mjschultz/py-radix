@@ -7,6 +7,16 @@ python:
   - "3.3"
   - "pypy"
 
+env:
+  - RADIX_NO_EXT=0
+  - RADIX_NO_EXT=1
+
+matrix:
+  exclude:
+    # pypy will always build without extension
+    - python: "pypy"
+      RADIX_NO_EXT=1
+
 install:
   - python setup.py install
 
