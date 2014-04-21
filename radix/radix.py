@@ -145,7 +145,7 @@ class RadixTree(object):
             for j in xrange(8):
                 if r & (0x80 >> j):
                     break
-            differ_bit = i * 8 + j + 1
+            differ_bit = i * 8 + j
             break
         if differ_bit > check_bit:
             differ_bit = check_bit
@@ -305,14 +305,12 @@ class RadixTree(object):
         quotient, remainder = divmod(bitlen, 8)
         if l[:quotient] != r[:quotient]:
             return False
-        if remainder:
-            lp = ord(l[quotient+1])
-            rp = ord(r[quotient+1])
-            for i in xrange(remainder):
-                mask = 1 << (8 - i)
-                if lp & mask != rp & mask:
-                    return False
-        return True
+        if remainder == 0:
+            return True
+        mask = (~0) << (8 - remainder)
+        if (ord(l[quotient]) & mask) == (ord(r[quotient]) & mask):
+            return True
+        return False
 
 
 class RadixNode(object):
@@ -320,10 +318,10 @@ class RadixNode(object):
                  parent=None, left=None, right=None):
         if prefix is None:
             class RadixGlue(RadixPrefix):
-                def __init__(self, masklen=None):
-                    self.masklen = masklen
+                def __init__(self, bitlen=None):
+                    self.bitlen = bitlen
 
-            prefix = RadixGlue(masklen=prefix_size)
+            prefix = RadixGlue(bitlen=prefix_size)
         self._prefix = prefix
         self.parent = parent
         self.left = left
