@@ -90,7 +90,7 @@ class RadixTree(object):
         right = 0x80 >> (bitlen & 0x07)
         return left & right
 
-    def lookup(self, prefix):
+    def add(self, prefix):
         if self.head is None:
             # easy case
             node = RadixNode(prefix)
