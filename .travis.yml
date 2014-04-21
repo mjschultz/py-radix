@@ -8,13 +8,13 @@ python:
   - "pypy"
 
 env:
-  - RADIX_NO_EXT=0
-  - RADIX_NO_EXT=1
+  - RADIX_NO_EXT=true
+  - RADIX_NO_EXT=false
 
 matrix:
   exclude:
     - python: "pypy"  # pypy will always build without extension
-      RADIX_NO_EXT=1
+      env: RADIX_NO_EXT=false
 
 install:
   - python setup.py install
