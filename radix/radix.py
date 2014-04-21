@@ -19,7 +19,15 @@ class RadixPrefix(object):
             self._from_packed(packed, masklen)
 
     def __str__(self):
-        return '{}/{}'.format(inet_ntop(self.family, self.addr), self.bitlen)
+        return '{}/{}'.format(self.network, self.bitlen)
+
+    @property
+    def packed(self):
+        return str(self.addr)
+
+    @property
+    def network(self):
+        return inet_ntop(self.family, self.addr)
 
     def _from_network(self, network, masklen):
         split = network.split('/')
@@ -103,7 +111,7 @@ class RadixTree(object):
                     break
                 node = node.left
         # find the first differing bit
-        test_addr = node.prefix.addr
+        test_addr = node._prefix.addr
         check_bit = node.bitlen if node.bitlen < bitlen else bitlen
         differ_bit = 0
         for i in xrange(0, check_bit / 8):
@@ -124,8 +132,8 @@ class RadixTree(object):
             node, parent = parent, node.parent
         # found a match
         if differ_bit == bitlen and node.bitlen == bitlen:
-            if node.prefix is None:
-                node.prefix = prefix
+            if node._prefix is None:
+                node._prefix = prefix
             return node
         # no match, new node
         new_node = RadixNode(prefix)
@@ -179,7 +187,7 @@ class RadixTree(object):
 
         stack = []
         while node.bitlen < bitlen:
-            if node.prefix:
+            if node._prefix:
                 stack.append(node)
             if self._addr_test(addr, node.bitlen):
                 node = node.right
@@ -187,13 +195,13 @@ class RadixTree(object):
                 node = node.left
             if node is None:
                 break
-        if node and node.prefix:
+        if node and node._prefix:
             stack.append(node)
         if len(stack) <= 0:
             return None
         for node in stack[::-1]:
-            if (self._prefix_match(node.prefix, prefix, bitlen) and
-                    node.prefix.bitlen <= bitlen):
+            if (self._prefix_match(node._prefix, prefix, node.bitlen) and
+                    node.bitlen <= bitlen):
                 return node
         return None
 
