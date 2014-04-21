@@ -24,8 +24,6 @@ import struct
 import pickle
 if sys.version_info[0] >= 3:
     # for Py3K
-    t00_class_name = "<class '_radix.Radix'>"
-    t01_node_name = "<class '_radix.RadixNode'>"
     t14_packed_addr = struct.pack('4B', 0xe0, 0x14, 0x0b, 0x40)
     t15_packed_addr = struct.pack(
         '16B',
@@ -34,8 +32,6 @@ if sys.version_info[0] >= 3:
 else:
     # for 2.x
     import cPickle
-    t00_class_name = "<type '_radix.Radix'>"
-    t01_node_name = "<type '_radix.RadixNode'>"
     t14_packed_addr = '\xe0\x14\x0b@'
     t15_packed_addr = ('\xde\xad\xbe\xef\x124Vx'
                        '\x9a\xbc\xde\xf0\x00\x00\x00\x00')
@@ -44,13 +40,13 @@ else:
 class TestRadix(unittest.TestCase):
     def test_00__create_destroy(self):
         tree = radix.Radix()
-        self.assertEqual(str(type(tree)), t00_class_name)
+        self.assertIn('radix.Radix', str(type(tree)))
         del tree
 
     def test_01__create_node(self):
         tree = radix.Radix()
         node = tree.add("10.0.0.0/8")
-        self.assertEqual(str(type(node)), t01_node_name)
+        self.assertIn('radix.RadixNode', str(type(node)))
         self.assertEqual(node.prefix, "10.0.0.0/8")
         self.assertEqual(node.network, "10.0.0.0")
         self.assertEqual(node.prefixlen, 8)
