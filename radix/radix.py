@@ -29,6 +29,22 @@ class RadixPrefix(object):
     def network(self):
         return inet_ntop(self.family, self.addr)
 
+    def _inet_pton(self, family, sockaddr, masklen):
+        addr = []
+        addr.extend(inet_pton(family, sockaddr))
+        if family == AF_INET:
+            max_masklen = 32
+        elif family == AF_INET6:
+            max_masklen = 128
+        quotient, remainder = divmod(masklen, 8)
+        if remainder != 0:
+            addr[quotient] = chr(ord(addr[quotient]) & (~0) << (8 - remainder))
+            quotient += 1
+        while quotient < max_masklen / 8:
+            addr[quotient] = '\0'
+            quotient += 1
+        return ''.join(addr)
+
     def _from_network(self, network, masklen):
         split = network.split('/')
         if len(split) > 1:
@@ -55,20 +71,20 @@ class RadixPrefix(object):
                 raise ValueError('invalid prefix length')
         else:
             return
+        self.addr = self._inet_pton(family, sockaddr[0], masklen)
         self.bitlen = masklen
-        self.addr = inet_pton(family, sockaddr[0])
         self.family = family
 
     def _from_packed(self, packed, masklen):
         packed_len = len(packed)
         if packed_len == 4:
-            self.family = AF_INET
+            family = AF_INET
             if masklen is None:
                 masklen = 32
             if not (0 <= masklen <= 32):
                 raise ValueError('invalid prefix length')
         elif packed_len == 16:
-            self.family = AF_INET6
+            family = AF_INET6
             if masklen is None:
                 masklen = 128
             if not (0 <= masklen <= 128):
@@ -77,6 +93,7 @@ class RadixPrefix(object):
             return
         self.addr = packed
         self.bitlen = masklen
+        self.family = family
 
 
 class RadixTree(object):
@@ -102,7 +119,8 @@ class RadixTree(object):
         node = self.head
         # find the best place for the node
         while node.bitlen < bitlen or node._prefix is None:
-            if node.bitlen < self.maxbits and self._addr_test(addr, node.bitlen):
+            if (node.bitlen < self.maxbits and
+                    self._addr_test(addr, node.bitlen)):
                 if node.right is None:
                     break
                 node = node.right
@@ -114,16 +132,19 @@ class RadixTree(object):
         test_addr = node._prefix.addr
         check_bit = node.bitlen if node.bitlen < bitlen else bitlen
         differ_bit = 0
-        for i in xrange(0, check_bit / 8):
+        i = 0
+        while i * 8 < check_bit:
             r = ord(addr[i]) ^ ord(test_addr[i])
             if r == 0:
                 differ_bit = (i + 1) * 8
+                i += 1
                 continue
             # bitwise check
             for j in xrange(8):
                 if r & (0x80 >> j):
                     break
             differ_bit = i * 8 + j
+            break
         if differ_bit > check_bit:
             differ_bit = check_bit
         # now figure where to insert
@@ -141,7 +162,8 @@ class RadixTree(object):
         # fix it up
         if node.bitlen == differ_bit:
             new_node.parent = node
-            if node.bitlen < self.maxbits and self._addr_test(addr, node.bitlen):
+            if (node.bitlen < self.maxbits and
+                    self._addr_test(addr, node.bitlen)):
                 node.right = new_node
             else:
                 node.left = new_node
@@ -195,7 +217,7 @@ class RadixTree(object):
             else:
                 parent.left = None
                 child = parent.right
-            if parent.prefix:
+            if parent._prefix:
                 return
             # remove the parent too
             if parent.parent is None:
@@ -305,6 +327,7 @@ class RadixNode(object):
         self.left = left
         self.right = right
         self.data = data
+        self._cache = {}
 
     def __str__(self):
         return self.prefix
@@ -314,7 +337,9 @@ class RadixNode(object):
 
     @property
     def prefix(self):
-        return str(self._prefix)
+        if 'prefix' not in self._cache:
+            self._cache['prefix'] = str(self._prefix)
+        return self._cache['prefix']
 
     @property
     def prefixlen(self):
@@ -346,7 +371,8 @@ class Radix(object):
             node = self._tree4.add(prefix)
         else:
             node = self._tree6.add(prefix)
-        node.data = {}
+        if node.data is None:
+            node.data = {}
         self.gen_id += 1
         return node
 
