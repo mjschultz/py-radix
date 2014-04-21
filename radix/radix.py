@@ -27,6 +27,8 @@ class RadixPrefix(object):
 
     @property
     def network(self):
+        if not self.addr:
+            return None
         return inet_ntop(self.family, self.addr)
 
     def _inet_pton(self, family, sockaddr, masklen):
@@ -143,7 +145,7 @@ class RadixTree(object):
             for j in xrange(8):
                 if r & (0x80 >> j):
                     break
-            differ_bit = i * 8 + j
+            differ_bit = i * 8 + j + 1
             break
         if differ_bit > check_bit:
             differ_bit = check_bit
@@ -444,13 +446,15 @@ class Radix(object):
             yield elt
 
     def __getstate__(self):
-        pass
+        return [(elt.prefix, elt.data) for elt in self]
 
-    def __setstate__(self):
-        pass
+    def __setstate__(self, obj):
+        for prefix, data in obj:
+            node = self.add(prefix)
+            node.data = data
 
     def __reduce__(self):
-        pass
+        return (Radix, (), self.__getstate__())
 
 
 class RadixIter(object):
