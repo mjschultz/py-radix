@@ -19,7 +19,7 @@ class RadixPrefix(object):
             self._from_packed(packed, masklen)
 
     def __str__(self):
-        return '{}/{}'.format(self.network, self.bitlen)
+        return '{0}/{1}'.format(self.network, self.bitlen)
 
     @property
     def packed(self):
@@ -333,7 +333,7 @@ class RadixNode(object):
         return self.prefix
 
     def __repr__(self):
-        return '<{}>'.format(self.prefix)
+        return '<{0}>'.format(self.prefix)
 
     @property
     def prefix(self):
