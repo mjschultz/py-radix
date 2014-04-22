@@ -23,7 +23,7 @@ class RadixPrefix(object):
 
     @property
     def packed(self):
-        return str(self.addr)
+        return bytes(self.addr)
 
     @property
     def network(self):
