@@ -335,6 +335,10 @@ class RadixNode(object):
         return '<{0}>'.format(self.prefix)
 
     @property
+    def network(self):
+        return self._prefix.network
+
+    @property
     def prefix(self):
         if 'prefix' not in self._cache:
             self._cache['prefix'] = str(self._prefix)
@@ -348,10 +352,6 @@ class RadixNode(object):
     @property
     def family(self):
         return self._prefix.family
-
-    @property
-    def network(self):
-        return self._prefix.network
 
     @property
     def packed(self):
@@ -452,7 +452,3 @@ class Radix(object):
 
     def __reduce__(self):
         return (Radix, (), self.__getstate__())
-
-
-class RadixIter(object):
-    pass
