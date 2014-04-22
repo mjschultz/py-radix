@@ -314,17 +314,20 @@ class RadixTree(object):
         return False
 
 
+class RadixGlue(RadixPrefix):
+    def __init__(self, bitlen=None):
+        self.bitlen = bitlen
+
+
 class RadixNode(object):
     def __init__(self, prefix=None, prefix_size=None, data=None,
                  parent=None, left=None, right=None):
-        if prefix is None:
-            class RadixGlue(RadixPrefix):
-                def __init__(self, bitlen=None):
-                    self.bitlen = bitlen
-
-            prefix = RadixGlue(bitlen=prefix_size)
-        self._prefix = prefix
+        if prefix:
+            self._prefix = prefix
+        else:
+            self._prefix = RadixGlue(bitlen=prefix_size)
         self.parent = parent
+        self.bitlen = self._prefix.bitlen
         self.left = left
         self.right = right
         self.data = data
@@ -348,8 +351,7 @@ class RadixNode(object):
 
     @property
     def prefixlen(self):
-        return self._prefix.bitlen
-    bitlen = prefixlen
+        return self.bitlen
 
     @property
     def family(self):
