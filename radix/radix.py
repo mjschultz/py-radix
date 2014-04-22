@@ -29,23 +29,22 @@ class RadixPrefix(object):
     def network(self):
         if not self.addr:
             return None
-        return inet_ntop(self.family, self.addr)
+        return inet_ntop(self.family, bytes(self.addr))
 
     def _inet_pton(self, family, sockaddr, masklen):
-        addr = []
-        addr.extend(inet_pton(family, sockaddr))
+        addr = bytearray(inet_pton(family, sockaddr))
         if family == AF_INET:
             max_masklen = 32
         elif family == AF_INET6:
             max_masklen = 128
         quotient, remainder = divmod(masklen, 8)
         if remainder != 0:
-            addr[quotient] = chr(ord(addr[quotient]) & (~0) << (8 - remainder))
+            addr[quotient] = addr[quotient] & ((~0) << (8 - remainder))
             quotient += 1
         while quotient < max_masklen / 8:
-            addr[quotient] = '\0'
+            addr[quotient] = 0
             quotient += 1
-        return ''.join(addr)
+        return addr
 
     def _from_network(self, network, masklen):
         split = network.split('/')
@@ -60,7 +59,7 @@ class RadixPrefix(object):
         try:
             family, _, _, _, sockaddr = getaddrinfo(network, None)[0]
         except gaierror as e:
-            raise ValueError(e.message)
+            raise ValueError(e)
         if family == AF_INET:
             if masklen is None:
                 masklen = 32
@@ -105,7 +104,7 @@ class RadixTree(object):
         self.active_nodes = 0
 
     def _addr_test(self, addr, bitlen):
-        left = ord(addr[bitlen >> 3])
+        left = addr[bitlen >> 3]
         right = 0x80 >> (bitlen & 0x07)
         return left & right
 
@@ -136,13 +135,13 @@ class RadixTree(object):
         differ_bit = 0
         i = 0
         while i * 8 < check_bit:
-            r = ord(addr[i]) ^ ord(test_addr[i])
+            r = addr[i] ^ test_addr[i]
             if r == 0:
                 differ_bit = (i + 1) * 8
                 i += 1
                 continue
             # bitwise check
-            for j in xrange(8):
+            for j in range(8):
                 if r & (0x80 >> j):
                     break
             differ_bit = i * 8 + j
@@ -308,7 +307,7 @@ class RadixTree(object):
         if remainder == 0:
             return True
         mask = (~0) << (8 - remainder)
-        if (ord(l[quotient]) & mask) == (ord(r[quotient]) & mask):
+        if (l[quotient] & mask) == (r[quotient] & mask):
             return True
         return False
 
