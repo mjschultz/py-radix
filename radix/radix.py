@@ -1,5 +1,6 @@
 from socket import (getaddrinfo, gaierror,
-                    inet_pton, inet_ntop, AF_INET, AF_INET6)
+                    inet_pton, inet_ntop, AF_INET, AF_INET6, SOCK_RAW,
+                    AI_NUMERICHOST)
 
 
 class RadixPrefix(object):
@@ -57,7 +58,8 @@ class RadixPrefix(object):
         else:
             network = split[0]
         try:
-            family, _, _, _, sockaddr = getaddrinfo(network, None)[0]
+            family, _, _, _, sockaddr = getaddrinfo(
+                network, None, 0, SOCK_RAW, 6, AI_NUMERICHOST)[0]
         except gaierror as e:
             raise ValueError(e)
         if family == AF_INET:
