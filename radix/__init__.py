@@ -38,8 +38,8 @@ class Radix(object):
     def __getstate__(self):
         return self._radix.__getstate__()
 
-    def __setstate__(self, *args, **kwargs):
-        self._radix.__setstate__(*args, **kwargs)
+    def __setstate__(self, state):
+        self._radix.__setstate__(state)
 
     def __reduce__(self):
         return (Radix, (), self.__getstate__())
