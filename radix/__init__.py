@@ -12,34 +12,18 @@ __all__ = ['Radix']
 class Radix(object):
     def __init__(self):
         self._radix = _Radix()
-
-    def add(self, *args, **kwargs):
-        return self._radix.add(*args, **kwargs)
-
-    def delete(self, *args, **kwargs):
-        self._radix.delete(*args, **kwargs)
-
-    def search_exact(self, *args, **kwargs):
-        return self._radix.search_exact(*args, **kwargs)
-
-    def search_best(self, *args, **kwargs):
-        return self._radix.search_best(*args, **kwargs)
-
-    def nodes(self):
-        return self._radix.nodes()
-
-    def prefixes(self):
-        return self._radix.prefixes()
+        self.add = self._radix.add
+        self.delete = self._radix.delete
+        self.search_exact = self._radix.search_exact
+        self.search_best = self._radix.search_best
+        self.nodes = self._radix.nodes
+        self.prefixes = self._radix.prefixes
+        self.__getstate__ = self._radix.__getstate__
+        self.__setstate__ = self._radix.__setstate__
 
     def __iter__(self):
         for elt in self._radix:
             yield elt
-
-    def __getstate__(self):
-        return self._radix.__getstate__()
-
-    def __setstate__(self, state):
-        self._radix.__setstate__(state)
 
     def __reduce__(self):
         return (Radix, (), self.__getstate__())
