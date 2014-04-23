@@ -27,7 +27,7 @@ if not IS_PYPY and not RADIX_NO_EXT:
 
 setup(
     name='py-radix',
-    version='0.5.0',
+    version='0.6.0',
     maintainer='Michael J. Schultz',
     maintainer_email='mjschultz@gmail.com',
     url='https://github.com/mjschultz/py-radix',
