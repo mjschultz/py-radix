@@ -12,7 +12,8 @@ here = abspath(dirname(__file__))
 
 # determine the python version
 IS_PYPY = hasattr(sys, 'pypy_version_info')
-RADIX_NO_EXT = os.environ.get('RADIX_NO_EXT', False)
+RADIX_NO_EXT = os.environ.get('RADIX_NO_EXT', '0')
+RADIX_NO_EXT = True if RADIX_NO_EXT not in ('0', 'false', 'False') else False
 
 
 # Read the version number from a source file.

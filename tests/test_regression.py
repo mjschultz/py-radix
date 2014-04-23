@@ -24,8 +24,6 @@ import struct
 import pickle
 if sys.version_info[0] >= 3:
     # for Py3K
-    t00_class_name = "<class '_radix.Radix'>"
-    t01_node_name = "<class '_radix.RadixNode'>"
     t14_packed_addr = struct.pack('4B', 0xe0, 0x14, 0x0b, 0x40)
     t15_packed_addr = struct.pack(
         '16B',
@@ -34,8 +32,6 @@ if sys.version_info[0] >= 3:
 else:
     # for 2.x
     import cPickle
-    t00_class_name = "<type '_radix.Radix'>"
-    t01_node_name = "<type '_radix.RadixNode'>"
     t14_packed_addr = '\xe0\x14\x0b@'
     t15_packed_addr = ('\xde\xad\xbe\xef\x124Vx'
                        '\x9a\xbc\xde\xf0\x00\x00\x00\x00')
@@ -44,13 +40,13 @@ else:
 class TestRadix(unittest.TestCase):
     def test_00__create_destroy(self):
         tree = radix.Radix()
-        self.assertEqual(str(type(tree)), t00_class_name)
+        self.assertTrue('radix.Radix' in str(type(tree)))
         del tree
 
     def test_01__create_node(self):
         tree = radix.Radix()
         node = tree.add("10.0.0.0/8")
-        self.assertEqual(str(type(node)), t01_node_name)
+        self.assertTrue('radix.RadixNode' in str(type(node)))
         self.assertEqual(node.prefix, "10.0.0.0/8")
         self.assertEqual(node.network, "10.0.0.0")
         self.assertEqual(node.prefixlen, 8)
@@ -64,7 +60,7 @@ class TestRadix(unittest.TestCase):
         node2 = tree.add(network="ff00::", masklen=24)
         self.assertEqual(node2.network, "ff00::")
         self.assertEqual(node2.prefixlen, 24)
-        self.assert_(node is not node2)
+        self.assertTrue(node is not node2)
 
     def test_02__node_userdata(self):
         tree = radix.Radix()
@@ -178,16 +174,16 @@ class TestRadix(unittest.TestCase):
         tree = radix.Radix()
         node1 = tree.add("10.0.0.0/8")
         node2 = tree.add("10.0.0.0/8")
-        self.assert_(node1 is node2)
-        self.assert_(node1.prefix is node2.prefix)
+        self.assertTrue(node1 is node2)
+        self.assertTrue(node1.prefix is node2.prefix)
 
     def test_12__inconsistent_masks4(self):
         tree = radix.Radix()
         node1 = tree.add("10.255.255.255", 28)
         node2 = tree.add(network="10.255.255.240/28")
         node3 = tree.add(network="10.255.255.252", masklen=28)
-        self.assert_(node1 is node2)
-        self.assert_(node1 is node3)
+        self.assertTrue(node1 is node2)
+        self.assertTrue(node1 is node3)
         self.assertEquals(node1.prefix, "10.255.255.240/28")
 
     def test_13__inconsistent_masks6(self):
@@ -195,8 +191,8 @@ class TestRadix(unittest.TestCase):
         node1 = tree.add("dead:beef:1234:5678::", 32)
         node2 = tree.add(network="dead:beef:8888:9999::/32")
         node3 = tree.add(network="dead:beef::", masklen=32)
-        self.assert_(node1 is node2)
-        self.assert_(node1 is node3)
+        self.assertTrue(node1 is node2)
+        self.assertTrue(node1 is node3)
         self.assertEquals(node1.prefix, "dead:beef::/32")
 
     def test_14__packed_addresses4(self):
@@ -237,8 +233,8 @@ class TestRadix(unittest.TestCase):
         node2 = tree.add("ffff::/32")
         node1_o = tree.search_best("255.255.255.255")
         node2_o = tree.search_best("ffff::")
-        self.assert_(node1 is node1_o)
-        self.assert_(node2 is node2_o)
+        self.assertTrue(node1 is node1_o)
+        self.assertTrue(node2 is node2_o)
         self.assertNotEquals(node1.prefix, node2.prefix)
         self.assertNotEquals(node1.network, node2.network)
         self.assertNotEquals(node1.family, node2.family)

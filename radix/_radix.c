@@ -23,7 +23,6 @@
 /* for Py3K */
 #if PY_MAJOR_VERSION >= 3
 # define PyInt_FromLong                 PyLong_FromLong
-# define PyString_AsString              PyBytes_AsString
 # define PyString_FromString            PyUnicode_FromString
 # define PyString_FromStringAndSize     PyBytes_FromStringAndSize
 #endif
@@ -535,131 +534,6 @@ Radix_prefixes(RadixObject *self, PyObject *args)
         return (ret);
 }
 
-/* Used for pickling */
-static PyObject *
-radix_getstate(RadixObject *self)
-{
-        radix_node_t *node;
-        PyObject *ret;
-        RadixNodeObject *rnode;
-        PyObject *item_tuple;
-#if PY_MAJOR_VERSION >= 3
-        PyObject *prefix_bytes;
-#endif
-
-        if ((ret = PyList_New(0)) == NULL)
-                return NULL;
-
-        RADIX_WALK(self->rt4->head, node) {
-                if (node->data != NULL) {
-                        rnode = (RadixNodeObject *)node->data;
-#if PY_MAJOR_VERSION >= 3
-                        prefix_bytes = PyUnicode_AsASCIIString(rnode->prefix);
-                        item_tuple = Py_BuildValue("(OO)", prefix_bytes, rnode->user_attr);
-                        PyList_Append(ret, item_tuple);
-                        Py_DECREF(item_tuple);
-                        Py_DECREF(prefix_bytes);
-#else
-                        item_tuple = Py_BuildValue("(OO)", rnode->prefix, rnode->user_attr);
-                        PyList_Append(ret, item_tuple);
-                        Py_DECREF(item_tuple);
-#endif
-                }
-        } RADIX_WALK_END;
-        RADIX_WALK(self->rt6->head, node) {
-                if (node->data != NULL) {
-                        rnode = (RadixNodeObject *)node->data;
-#if PY_MAJOR_VERSION >= 3
-                        prefix_bytes = PyUnicode_AsASCIIString(rnode->prefix);
-                        item_tuple = Py_BuildValue("(OO)", prefix_bytes, rnode->user_attr);
-                        PyList_Append(ret, item_tuple);
-                        Py_DECREF(item_tuple);
-                        Py_DECREF(prefix_bytes);
-#else
-                        item_tuple = Py_BuildValue("(OO)", rnode->prefix, rnode->user_attr);
-                        PyList_Append(ret, item_tuple);
-                        Py_DECREF(item_tuple);
-#endif
-                }
-        } RADIX_WALK_END;
-
-        return (ret);
-}
-
-static PyObject *
-Radix_getstate(RadixObject *self, PyObject *args)
-{
-        if (!PyArg_ParseTuple(args, ":__getstate__"))
-                return NULL;
-        return radix_getstate(self);
-}
-
-static PyObject *
-Radix_reduce(RadixObject *self, PyObject *args)
-{
-        PyObject *state, *ret;
-
-        if (!PyArg_ParseTuple(args, ":__reduce__"))
-                return NULL;
-        if ((state = radix_getstate(self)) == NULL)
-                return NULL;
-
-        ret = Py_BuildValue("(O()O)", radix_constructor, state);
-        Py_XDECREF(state);
-
-        return ret;
-}
-
-/* Used for unpickling */
-static PyObject *
-Radix_setstate(RadixObject *self, PyObject *args)
-{
-        PyObject *state, *tpl, *addr, *data;
-        int len, i;
-        RadixNodeObject *node;
-        prefix_t *prefix;
-        char *addr_string;
-        const char *errmsg;
-
-        if (!Radix_CheckExact(self)) {
-                PyErr_SetString(PyExc_ValueError, "not a Radix object");
-                return NULL;
-        }
-
-        /* XXX type-checking is overstrict here */
-        if (!PyArg_ParseTuple(args, "O!:__setstate__", &PyList_Type, &state))
-                return NULL;
-
-        len = PyList_Size(state);
-        for (i = 0; i < len; i++) {
-                if ((tpl = PyList_GetItem(state, i)) == NULL)
-                        return NULL;
-                if ((addr = PyTuple_GetItem(tpl, 0)) == NULL)
-                        return NULL;
-                if ((data = PyTuple_GetItem(tpl, 1)) == NULL)
-                        return NULL;
-                if ((addr_string = PyString_AsString(addr)) == NULL)
-                        return NULL;
-                if ((prefix = prefix_pton(addr_string, -1, &errmsg)) == NULL) {
-                        PyErr_SetString(PyExc_ValueError, errmsg ? errmsg :
-                            "Invalid address format");
-                        return NULL;
-                }
-                if ((node = (RadixNodeObject *)create_add_node(self,
-                    prefix)) == NULL) {
-                        Deref_Prefix(prefix);
-                        return NULL;
-                }
-                Deref_Prefix(prefix);
-                Py_XDECREF(node->user_attr);
-                node->user_attr = data;
-                Py_INCREF(node->user_attr);
-        }
-
-        Py_INCREF(Py_None);
-        return Py_None;
-}
-
 static PyObject *
 Radix_getiter(RadixObject *self)
 {
@@ -675,9 +549,6 @@ static PyMethodDef Radix_methods[] = {
         {"search_best", (PyCFunction)Radix_search_best, METH_VARARGS|METH_KEYWORDS,     Radix_search_best_doc   },
         {"nodes",       (PyCFunction)Radix_nodes,       METH_VARARGS,                   Radix_nodes_doc         },
         {"prefixes",    (PyCFunction)Radix_prefixes,    METH_VARARGS,                   Radix_prefixes_doc      },
-        {"__getstate__",(PyCFunction)Radix_getstate,    METH_VARARGS,                   NULL                    },
-        {"__setstate__",(PyCFunction)Radix_setstate,    METH_VARARGS,                   NULL                    },
-        {"__reduce__",  (PyCFunction)Radix_reduce,      METH_VARARGS,                   NULL                    },
         {NULL,          NULL}           /* sentinel */
 };
 
