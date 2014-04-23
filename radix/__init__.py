@@ -17,7 +17,7 @@ class Radix(object):
         return self._radix.add(*args, **kwargs)
 
     def delete(self, *args, **kwargs):
-        return self._radix.delete(*args, **kwargs)
+        self._radix.delete(*args, **kwargs)
 
     def search_exact(self, *args, **kwargs):
         return self._radix.search_exact(*args, **kwargs)
@@ -39,7 +39,7 @@ class Radix(object):
         return self._radix.__getstate__()
 
     def __setstate__(self, *args, **kwargs):
-        return self._radix.__setstate__(*args, **kwargs)
+        self._radix.__setstate__(*args, **kwargs)
 
     def __reduce__(self):
         return (Radix, (), self.__getstate__())
