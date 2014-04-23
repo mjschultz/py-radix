@@ -445,11 +445,3 @@ class Radix(object):
             if init_id != self.gen_id:
                 raise RuntimeWarning('detected modification during iteration')
             yield elt
-
-    def __getstate__(self):
-        return [(elt.prefix, elt.data) for elt in self]
-
-    def __setstate__(self, obj):
-        for prefix, data in obj:
-            node = self.add(prefix)
-            node.data = data

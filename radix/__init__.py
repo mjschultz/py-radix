@@ -18,12 +18,19 @@ class Radix(object):
         self.search_best = self._radix.search_best
         self.nodes = self._radix.nodes
         self.prefixes = self._radix.prefixes
-        self.__getstate__ = self._radix.__getstate__
-        self.__setstate__ = self._radix.__setstate__
 
     def __iter__(self):
         for elt in self._radix:
             yield elt
+
+    def __getstate__(self):
+        return [(elt.prefix, elt.data) for elt in self]
+
+    def __setstate__(self, state):
+        for prefix, data in state:
+            node = self._radix.add(prefix)
+            for key in data:
+                node.data[key] = data[key]
 
     def __reduce__(self):
         return (Radix, (), self.__getstate__())
