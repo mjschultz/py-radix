@@ -453,6 +453,3 @@ class Radix(object):
         for prefix, data in obj:
             node = self.add(prefix)
             node.data = data
-
-    def __reduce__(self):
-        return (Radix, (), self.__getstate__())
