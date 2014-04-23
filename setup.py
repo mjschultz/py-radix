@@ -21,7 +21,9 @@ with codecs.open(join(here, 'README.rst'), encoding='utf-8') as f:
 extra_kwargs = {}
 if not IS_PYPY and not RADIX_NO_EXT:
     sources = ['radix/_radix.c', 'radix/_radix/radix.c']
-    radix = Extension('radix._radix', sources=sources)
+    radix = Extension('radix._radix',
+                      sources=sources,
+                      include_dirs=[join(here, 'radix')])
     extra_kwargs['ext_modules'] = [radix]
 
 
