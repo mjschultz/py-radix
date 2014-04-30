@@ -48,6 +48,7 @@ setup(
         'Programming Language :: Python :: 3',
         'Programming Language :: Python :: 3.2',
         'Programming Language :: Python :: 3.3',
+        'Programming Language :: Python :: 3.4',
     ],
     setup_requires=['nose', 'coverage'],
     packages=find_packages(exclude=['tests', 'tests.*']),
