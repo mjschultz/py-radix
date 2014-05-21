@@ -121,7 +121,7 @@ class RadixTree(object):
         bitlen = prefix.bitlen
         node = self.head
         # find the best place for the node
-        while node.bitlen < bitlen or node._prefix is None:
+        while node.bitlen < bitlen or node._prefix.addr is None:
             if (node.bitlen < self.maxbits and
                     self._addr_test(addr, node.bitlen)):
                 if node.right is None:
