@@ -374,6 +374,15 @@ class TestRadix(unittest.TestCase):
             tree.search_best('10.0.0.0/15').prefix,
             '10.0.0.0/13')
 
+    def test_23_add_with_glue(self):
+        # https://github.com/mjschultz/py-radix/issues/3
+        tree = radix.Radix()
+        tree.add('1.0.24.0/23')
+        tree.add('1.0.26.0/23')
+        tree.add('1.0.28.0/22')
+        expected = ['1.0.24.0/23', '1.0.26.0/23', '1.0.28.0/22']
+        self.assertEqual(expected, [n.prefix for n in tree])
+
 
 def main():
     unittest.main()
