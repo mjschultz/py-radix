@@ -328,6 +328,59 @@ radix_node_t
         return (radix_search_best2(radix, prefix, 1));
 }
 
+/* if inclusive != 0, "worst" may be the given prefix itself */
+static radix_node_t
+*radix_search_worst2(radix_tree_t *radix, prefix_t *prefix, int inclusive)
+{
+        radix_node_t *node;
+        radix_node_t *stack[RADIX_MAXBITS + 1];
+        u_char *addr;
+        u_int bitlen;
+        int cnt = 0;
+        int iterator = 0;
+
+        if (radix->head == NULL)
+                return (NULL);
+
+        node = radix->head;
+        addr = prefix_touchar(prefix);
+        bitlen = prefix->bitlen;
+
+        while (node->bit < bitlen) {
+                if (node->prefix)
+                        stack[cnt++] = node;
+                if (BIT_TEST(addr[node->bit >> 3], 0x80 >> (node->bit & 0x07)))
+                        node = node->r;
+                else
+                        node = node->l;
+
+                if (node == NULL)
+                        break;
+        }
+
+        if (inclusive && node && node->prefix)
+                stack[cnt++] = node;
+
+
+        if (cnt <= 0)
+                return (NULL);
+        
+        for (iterator; iterator < cnt; ++iterator) {
+                node = stack[iterator];
+                if (comp_with_mask(prefix_tochar(node->prefix),
+                    prefix_tochar(prefix), node->prefix->bitlen)) 
+                        return (node);
+        }
+        return (NULL);
+}
+
+
+radix_node_t
+*radix_search_worst(radix_tree_t *radix, prefix_t *prefix)
+{
+        return (radix_search_worst2(radix, prefix, 1));
+}
+
 
 radix_node_t
 *radix_lookup(radix_tree_t *radix, prefix_t *prefix)

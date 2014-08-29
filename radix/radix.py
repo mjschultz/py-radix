@@ -298,6 +298,32 @@ class RadixTree(object):
             return node
         return None
 
+    def search_worst(self, prefix):
+        if self.head is None:
+            return None
+        node = self.head
+        addr = prefix.addr
+        bitlen = prefix.bitlen
+
+        stack = []
+        while node.bitlen < bitlen:
+            if node._prefix:
+                stack.append(node)
+            if self._addr_test(addr, node.bitlen):
+                node = node.right
+            else:
+                node = node.left
+            if node is None:
+                break
+        if node and node._prefix:
+            stack.append(node)
+        if len(stack) <= 0:
+            return None
+        for node in stack:
+            if self._prefix_match(node._prefix, prefix, node.bitlen):
+                return node
+        return None
+
     def _prefix_match(self, left, right, bitlen):
         l = left.addr
         r = right.addr
@@ -406,6 +432,17 @@ class Radix(object):
             node = self._tree4.search_best(prefix)
         else:
             node = self._tree6.search_best(prefix)
+        if node and node.data is not None:
+            return node
+        else:
+            return None
+
+    def search_worst(self, network=None, masklen=None, packed=None):
+        prefix = RadixPrefix(network, masklen, packed)
+        if prefix.family == AF_INET:
+            node = self._tree4.search_worst(prefix)
+        else:
+            node = self._tree6.search_worst(prefix)
         if node and node.data is not None:
             return node
         else:

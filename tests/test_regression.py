@@ -383,6 +383,18 @@ class TestRadix(unittest.TestCase):
         expected = ['1.0.24.0/23', '1.0.26.0/23', '1.0.28.0/22']
         self.assertEqual(expected, [n.prefix for n in tree])
 
+    def test_24_search_worst(self):
+        tree = radix.Radix()
+        tree.add('10.0.0.0/8')
+        tree.add('10.0.0.0/13')
+        tree.add('10.0.0.0/16')
+        self.assertEquals(
+            tree.search_worst('10.0.0.0/15').prefix,
+            '10.0.0.0/8')
+        self.assertEquals(
+            tree.search_worst('100.0.0.0/15'),
+            None)
+
 
 def main():
     unittest.main()
