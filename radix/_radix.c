@@ -468,6 +468,47 @@ Radix_search_best(RadixObject *self, PyObject *args, PyObject *kw_args)
         return (PyObject *)node_obj;
 }
 
+PyDoc_STRVAR(Radix_search_worst_doc,
+"Radix.search_worst(network[, masklen][, packed] -> None\n\
+\n\
+Search for the specified network in the radix tree.\n\
+\n\
+search_worst will return the worst (shortest) entry that includes the\n\
+specified 'prefix', much like opposite of a IP routing table lookup.\n\
+\n\
+If no match is found, then returns None.");
+
+static PyObject *
+Radix_search_worst(RadixObject *self, PyObject *args, PyObject *kw_args)
+{
+        radix_node_t *node;
+        RadixNodeObject *node_obj;
+        prefix_t *prefix;
+        static char *keywords[] = { "network", "masklen", "packed", NULL };
+
+        char *addr = NULL, *packed = NULL;
+        long prefixlen = -1;
+        int packlen = -1;
+
+        if (!PyArg_ParseTupleAndKeywords(args, kw_args, "|sls#:search_worst", keywords,
+            &addr, &prefixlen, &packed, &packlen))
+                return NULL;
+        if ((prefix = args_to_prefix(addr, packed, packlen, prefixlen)) == NULL)
+                return NULL;
+
+        if ((node = radix_search_worst(PICKRT(prefix, self), prefix)) == NULL || 
+            node->data == NULL) {
+                Deref_Prefix(prefix);
+                Py_INCREF(Py_None);
+                return Py_None;
+        }
+        Deref_Prefix(prefix);
+        node_obj = node->data;
+        Py_XINCREF(node_obj);
+        return (PyObject *)node_obj;
+}
+
+
 PyDoc_STRVAR(Radix_nodes_doc,
 "Radix.nodes(prefix) -> List of RadixNode\n\
 \n\
@@ -547,6 +588,7 @@ static PyMethodDef Radix_methods[] = {
         {"delete",      (PyCFunction)Radix_delete,      METH_VARARGS|METH_KEYWORDS,     Radix_delete_doc        },
         {"search_exact",(PyCFunction)Radix_search_exact,METH_VARARGS|METH_KEYWORDS,     Radix_search_exact_doc  },
         {"search_best", (PyCFunction)Radix_search_best, METH_VARARGS|METH_KEYWORDS,     Radix_search_best_doc   },
+        {"search_worst", (PyCFunction)Radix_search_worst, METH_VARARGS|METH_KEYWORDS,     Radix_search_worst_doc   },
         {"nodes",       (PyCFunction)Radix_nodes,       METH_VARARGS,                   Radix_nodes_doc         },
         {"prefixes",    (PyCFunction)Radix_prefixes,    METH_VARARGS,                   Radix_prefixes_doc      },
         {NULL,          NULL}           /* sentinel */
@@ -808,6 +850,10 @@ PyDoc_STRVAR(module_doc,
 "       # Best-match search will return the longest matching prefix\n"
 "       # that contains the search term (routing-style lookup)\n"
 "       rnode = rtree.search_best(\"10.123.45.6\")\n"
+"\n"
+"       # Worst-match search will return the shortest matching prefix\n"
+"       # that contains the search term (inverse routing-style lookup)\n"
+"       rnode = rtree.search_worst(\"10.123.45.6\")\n"
 "\n"
 "       # There are a couple of implicit members of a RadixNode:\n"
 "       print rnode.network     # -> \"10.0.0.0\"\n"

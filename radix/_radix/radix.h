@@ -123,6 +123,7 @@ radix_node_t *radix_lookup(radix_tree_t *radix, prefix_t *prefix);
 void radix_remove(radix_tree_t *radix, radix_node_t *node);
 radix_node_t *radix_search_exact(radix_tree_t *radix, prefix_t *prefix);
 radix_node_t *radix_search_best(radix_tree_t *radix, prefix_t *prefix);
+radix_node_t *radix_search_worst(radix_tree_t *radix, prefix_t *prefix);
 void radix_process(radix_tree_t *radix, rdx_cb_t func, void *cbctx);
 
 #define RADIX_MAXBITS 128

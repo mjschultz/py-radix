@@ -81,6 +81,10 @@ A simple example that demonstrates most of the features: ::
 	# that contains the search term (routing-style lookup)
 	rnode = rtree.search_best("10.123.45.6")
 
+    # Worst-search will return the shortest matching prefix
+	# that contains the search term (inverse routing-style lookup)
+	rnode = rtree.search_worst("10.123.45.6")
+
 	# There are a couple of implicit members of a RadixNode:
 	print rnode.network	# -> "10.0.0.0"
 	print rnode.prefix	# -> "10.0.0.0/8"

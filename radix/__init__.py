@@ -16,6 +16,7 @@ class Radix(object):
         self.delete = self._radix.delete
         self.search_exact = self._radix.search_exact
         self.search_best = self._radix.search_best
+        self.search_worst = self._radix.search_worst
         self.nodes = self._radix.nodes
         self.prefixes = self._radix.prefixes
 
