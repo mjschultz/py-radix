@@ -50,7 +50,7 @@ setup(
         'Programming Language :: Python :: 3.3',
         'Programming Language :: Python :: 3.4',
     ],
-    setup_requires=['nose', 'coverage'],
+    tests_require=['nose', 'coverage'],
     packages=find_packages(exclude=['tests', 'tests.*']),
     test_suite='nose.collector',
     **extra_kwargs
