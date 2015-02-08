@@ -395,6 +395,24 @@ class TestRadix(unittest.TestCase):
             tree.search_worst('100.0.0.0/15'),
             None)
 
+    def test_25_search_covered(self):
+        tree = radix.Radix()
+        tree.add('10.0.0.0/8')
+        tree.add('10.0.0.0/13')
+        tree.add('10.0.0.0/31')
+        tree.add('11.0.0.0/16')
+        self.assertEquals(
+            [n.prefix for n in tree.search_covered('10.0.0.0/8')],
+            ['10.0.0.0/8', '10.0.0.0/13', '10.0.0.0/31'])
+        self.assertEquals(
+            [n.prefix for n in tree.search_covered('11.0.0.0/8')],
+            ['11.0.0.0/16'])
+        self.assertEquals(
+            [n.prefix for n in tree.search_covered('21.0.0.0/8')],
+            [])
+        self.assertEquals(
+            [n.prefix for n in tree.search_covered('0.0.0.0/0')],
+            ['10.0.0.0/8', '10.0.0.0/13', '10.0.0.0/31', '11.0.0.0/16'])
 
 def main():
     unittest.main()
