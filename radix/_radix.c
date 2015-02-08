@@ -543,18 +543,18 @@ Radix_search_covered(RadixObject *self, PyObject *args, PyObject *kw_args)
         //         return Py_None;
         // }
 
-        // RADIX_WALK(self->rt4->head, node) {
-        //         if (node->data != NULL) {
-        //                 PyList_Append(ret,
-        //                     ((RadixNodeObject *)node->data)->prefix);
-        //         }
-        // } RADIX_WALK_END;
-        // RADIX_WALK(self->rt6->head, node) {
-        //         if (node->data != NULL) {
-        //                 PyList_Append(ret,
-        //                     ((RadixNodeObject *)node->data)->prefix);
-        //         }
-        // } RADIX_WALK_END;
+        RADIX_WALK(self->rt4->head, node) {
+                if (node->data != NULL) {
+                        PyList_Append(ret,
+                            ((RadixNodeObject *)node->data));
+                }
+        } RADIX_WALK_END;
+        RADIX_WALK(self->rt6->head, node) {
+                if (node->data != NULL) {
+                        PyList_Append(ret,
+                            ((RadixNodeObject *)node->data));
+                }
+        } RADIX_WALK_END;
 
         Deref_Prefix(prefix);
         return (ret);
