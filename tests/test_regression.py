@@ -175,7 +175,7 @@ class TestRadix(unittest.TestCase):
         node1 = tree.add("10.0.0.0/8")
         node2 = tree.add("10.0.0.0/8")
         self.assertTrue(node1 is node2)
-        self.assertTrue(node1.prefix is node2.prefix)
+        self.assertEqual(node1.prefix, node2.prefix)
 
     def test_12__inconsistent_masks4(self):
         tree = radix.Radix()
