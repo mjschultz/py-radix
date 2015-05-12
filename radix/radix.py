@@ -156,7 +156,7 @@ class RadixTree(object):
             node, parent = parent, node.parent
         # found a match
         if differ_bit == bitlen and node.bitlen == bitlen:
-            if node._prefix is None:
+            if isinstance(node._prefix, RadixGlue):
                 node._prefix = prefix
             return node
         # no match, new node
@@ -371,9 +371,7 @@ class RadixNode(object):
 
     @property
     def prefix(self):
-        if 'prefix' not in self._cache:
-            self._cache['prefix'] = str(self._prefix)
-        return self._cache['prefix']
+        return str(self._prefix)
 
     @property
     def prefixlen(self):
