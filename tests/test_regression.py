@@ -395,6 +395,15 @@ class TestRadix(unittest.TestCase):
             tree.search_worst('100.0.0.0/15'),
             None)
 
+    def test_25_search_default(self):
+        tree = radix.Radix()
+        tree.add('192.168.30.0/24')
+        tree.add('1.1.2.0/24')
+        tree.add('0.0.0.0/0')
+        self.assertEquals(
+            tree.search_best('10.10.10.10').prefix,
+            '0.0.0.0/0')
+
 
 def main():
     unittest.main()
