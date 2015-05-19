@@ -324,6 +324,34 @@ class RadixTree(object):
                 return node
         return None
 
+    def search_covered(self, prefix):
+        results = []
+        if self.head is None:
+            return results
+        node = self.head
+        addr = prefix.addr
+        bitlen = prefix.bitlen
+
+        while node.bitlen < bitlen:
+            if self._addr_test(addr, node.bitlen):
+                node = node.right
+            else:
+                node = node.left
+            if node is None:
+                return results
+
+        stack = [node]
+        while stack:
+            node = stack.pop()
+            if self._prefix_match(node._prefix, prefix, prefix.bitlen):
+                results.append(node)
+            if node.right:
+                stack.append(node.right)
+            if node.left:
+                stack.append(node.left)
+
+        return results
+
     def _prefix_match(self, left, right, bitlen):
         l = left.addr
         r = right.addr
@@ -445,6 +473,13 @@ class Radix(object):
             return node
         else:
             return None
+
+    def search_covered(self, network=None, masklen=None, packed=None):
+        prefix = RadixPrefix(network, masklen, packed)
+        if prefix.family == AF_INET:
+            return self._tree4.search_covered(prefix)
+        else:
+            return self._tree6.search_covered(prefix)
 
     def _iter(self, node):
         stack = []

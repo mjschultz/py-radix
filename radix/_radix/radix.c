@@ -275,6 +275,38 @@ radix_node_t
 }
 
 
+/* seach for a node without checking if it is a "real" node */
+radix_node_t
+*radix_search_node(radix_tree_t *radix, prefix_t *prefix)
+{
+        radix_node_t *node;
+        u_char *addr;
+        u_int bitlen;
+
+        if (radix->head == NULL)
+                return (NULL);
+
+        node = radix->head;
+        addr = prefix_touchar(prefix);
+        bitlen = prefix->bitlen;
+
+        while (node->bit < bitlen) {
+                if (BIT_TEST(addr[node->bit >> 3], 0x80 >> (node->bit & 0x07)))
+                        node = node->r;
+                else
+                        node = node->l;
+
+                if (node == NULL)
+                        return (NULL);
+        }
+
+        if (comp_with_mask(prefix_tochar(node->prefix), prefix_tochar(prefix), bitlen))
+                return (node);
+
+        return (NULL);
+}
+
+
 /* if inclusive != 0, "best" may be the given prefix itself */
 static radix_node_t
 *radix_search_best2(radix_tree_t *radix, prefix_t *prefix, int inclusive)
