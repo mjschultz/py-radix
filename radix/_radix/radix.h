@@ -121,6 +121,7 @@ radix_tree_t *New_Radix(void);
 void Destroy_Radix(radix_tree_t *radix, rdx_cb_t func, void *cbctx);
 radix_node_t *radix_lookup(radix_tree_t *radix, prefix_t *prefix);
 void radix_remove(radix_tree_t *radix, radix_node_t *node);
+radix_node_t *radix_search_node(radix_tree_t *radix, prefix_t *prefix);
 radix_node_t *radix_search_exact(radix_tree_t *radix, prefix_t *prefix);
 radix_node_t *radix_search_best(radix_tree_t *radix, prefix_t *prefix);
 radix_node_t *radix_search_worst(radix_tree_t *radix, prefix_t *prefix);

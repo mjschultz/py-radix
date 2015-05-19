@@ -81,9 +81,14 @@ A simple example that demonstrates most of the features: ::
 	# that contains the search term (routing-style lookup)
 	rnode = rtree.search_best("10.123.45.6")
 
-    # Worst-search will return the shortest matching prefix
+	# Worst-search will return the shortest matching prefix
 	# that contains the search term (inverse routing-style lookup)
 	rnode = rtree.search_worst("10.123.45.6")
+
+	# Covered search will return all prefixes inside the given
+	# search term, as a list (including the search term itself,
+	# if present in the tree)
+	rnodes = rtree.search_covered("10.123.0.0/16")
 
 	# There are a couple of implicit members of a RadixNode:
 	print rnode.network	# -> "10.0.0.0"
@@ -99,7 +104,7 @@ A simple example that demonstrates most of the features: ::
 	# Use the nodes() method to return all RadixNodes created
 	nodes = rtree.nodes()
 	for rnode in nodes:
-  		print rnode.prefix
+		print rnode.prefix
 
 	# The prefixes() method will return all the prefixes (as a
 	# list of strings) that have been entered
