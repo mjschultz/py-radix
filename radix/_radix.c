@@ -538,7 +538,6 @@ Radix_search_covered(RadixObject *self, PyObject *args, PyObject *kw_args)
 
         if ((node = radix_search_node(PICKRT(prefix, self), prefix)) == NULL) {
                 Deref_Prefix(prefix);
-                Py_INCREF(Py_None);
                 return ret;
         }
 
