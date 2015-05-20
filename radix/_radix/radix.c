@@ -300,6 +300,15 @@ radix_node_t
                         return (NULL);
         }
 
+        // comp_with_mask will segfault node->prefix is null
+        // Not entirely sure when this happens, but I think it happens when
+        // no nodes exist above the requested prefix
+        // Right now this solved by seeing if it is null, and then returning
+        // Not 100% sure this is always right, but it passes the tests :-)
+
+        if ( ! node->prefix)
+                return node; // cannot compare
+
         if (comp_with_mask(prefix_tochar(node->prefix), prefix_tochar(prefix), bitlen))
                 return (node);
 

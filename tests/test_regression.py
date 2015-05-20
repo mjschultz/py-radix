@@ -437,8 +437,9 @@ class TestRadix(unittest.TestCase):
         tree.add('193.178.156.0/24')
         tree.add('193.178.157.0/24')
 
-        tree.search_covered('193.178.158.0/21')
-
+        self.assertEquals(
+            [ n.prefix for n in tree.search_covered('193.178.152.0/21')],
+            [ '193.178.156.0/24', '193.178.157.0/24'])
 
 
 def main():
