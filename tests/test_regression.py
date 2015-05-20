@@ -431,6 +431,15 @@ class TestRadix(unittest.TestCase):
             ['10.0.0.0/8', '10.0.0.0/13', '10.0.0.0/31', '11.0.0.0/16'])
 
 
+    def test_26_search_covered_segfault(self):
+        # the following will make py-radix 0.8 segfault
+        tree = radix.Radix()
+        tree.add('193.178.156.0/24')
+        tree.add('193.178.157.0/24')
+
+        tree.search_covered('193.178.158.0/21')
+
+
 
 def main():
     unittest.main()
