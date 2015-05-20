@@ -442,6 +442,18 @@ class TestRadix(unittest.TestCase):
             [ '193.178.156.0/24', '193.178.157.0/24'])
 
 
+    def test_28_search_covered_super_node_error(self):
+
+        tree = radix.Radix()
+        tree.add('27.0.100.0/24')
+        tree.add('27.0.101.0/24')
+
+        self.assertEquals(
+            [ n.prefix for n in tree.search_covered('31.3.104.0/21') ],
+            [])
+
+
+
 def main():
     unittest.main()
 
