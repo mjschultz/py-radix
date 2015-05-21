@@ -431,6 +431,28 @@ class TestRadix(unittest.TestCase):
             ['10.0.0.0/8', '10.0.0.0/13', '10.0.0.0/31', '11.0.0.0/16'])
 
 
+    def test_27_search_covered_segfault(self):
+        # the following will make py-radix 0.8 segfault
+        tree = radix.Radix()
+        tree.add('193.178.156.0/24')
+        tree.add('193.178.157.0/24')
+
+        self.assertEquals(
+            [ n.prefix for n in tree.search_covered('193.178.152.0/21')],
+            [ '193.178.156.0/24', '193.178.157.0/24'])
+
+
+    def test_28_search_covered_super_node_error(self):
+
+        tree = radix.Radix()
+        tree.add('27.0.100.0/24')
+        tree.add('27.0.101.0/24')
+
+        self.assertEquals(
+            [ n.prefix for n in tree.search_covered('31.3.104.0/21') ],
+            [])
+
+
 
 def main():
     unittest.main()

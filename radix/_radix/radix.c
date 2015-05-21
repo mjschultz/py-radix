@@ -300,10 +300,51 @@ radix_node_t
                         return (NULL);
         }
 
-        if (comp_with_mask(prefix_tochar(node->prefix), prefix_tochar(prefix), bitlen))
-                return (node);
+        // if the node has a prefix we can (and must to avoid false negatives) check directly
+        if (node->prefix) {
+                if (comp_with_mask(prefix_tochar(node->prefix), prefix_tochar(prefix), bitlen))
+                        return (node);
+                else
+                        return (NULL);
+        }
 
-        return (NULL);
+        // We can risk landing on an intermediate node (no set prefix), that doesn't match the wanted prefix
+        // When this happens we have to check the two subtrees, if a subtree does not match, that part should
+        // not be returned. If both match the entire node should be returned. If none match, null is returned.
+
+        int right_mismatch = 0;
+        int left_mismatch = 0;
+        radix_node_t *node_iter;
+
+        RADIX_WALK(node->r, node_iter) {
+            if (node_iter->data != NULL) {
+                if ( ! comp_with_mask(prefix_tochar(node_iter->prefix), prefix_tochar(prefix), bitlen)) {
+                    right_mismatch = 1;
+                    break;
+                }
+            }
+        } RADIX_WALK_END;
+
+        RADIX_WALK(node->l, node_iter) {
+            if (node_iter->data != NULL) {
+                if ( ! comp_with_mask(prefix_tochar(node_iter->prefix), prefix_tochar(prefix), bitlen)) {
+                    left_mismatch = 1;
+                    break;
+                }
+            }
+        } RADIX_WALK_END;
+
+        if (right_mismatch && left_mismatch) {
+            return (NULL);
+        }
+        if (right_mismatch) {
+            return node->l;
+        }
+        if (left_mismatch) {
+            return node->r;
+        }
+        return node;
+
 }
 
 
