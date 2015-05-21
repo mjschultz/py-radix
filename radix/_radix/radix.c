@@ -282,7 +282,6 @@ radix_node_t
         radix_node_t *node;
         u_char *addr;
         u_int bitlen;
-        prefix_t *prefix_cmp;
 
         if (radix->head == NULL)
                 return (NULL);
