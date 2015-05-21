@@ -320,6 +320,7 @@ radix_node_t
             if (node_iter->data != NULL) {
                 if ( ! comp_with_mask(prefix_tochar(node_iter->prefix), prefix_tochar(prefix), bitlen)) {
                     right_mismatch = 1;
+                    break;
                 }
             }
         } RADIX_WALK_END;
@@ -328,6 +329,7 @@ radix_node_t
             if (node_iter->data != NULL) {
                 if ( ! comp_with_mask(prefix_tochar(node_iter->prefix), prefix_tochar(prefix), bitlen)) {
                     left_mismatch = 1;
+                    break;
                 }
             }
         } RADIX_WALK_END;
