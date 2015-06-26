@@ -18,6 +18,7 @@ class Radix(object):
         self.search_best = self._radix.search_best
         self.search_worst = self._radix.search_worst
         self.search_covered = self._radix.search_covered
+        self.search_covering = self._radix.search_covering
         self.nodes = self._radix.nodes
         self.prefixes = self._radix.prefixes
 
