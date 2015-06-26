@@ -481,6 +481,16 @@ class Radix(object):
         else:
             return self._tree6.search_covered(prefix)
 
+    def search_covering(self, network=None, masklen=None, packed=None):
+        node = self.search_best(network=network, masklen=masklen,
+                                packed=packed)
+        stack = []
+        while node is not None:
+            if node._prefix and node.data is not None:
+                stack.append(node)
+            node = node.parent
+        return stack
+
     def _iter(self, node):
         stack = []
         while node is not None:

@@ -453,6 +453,28 @@ class TestRadix(unittest.TestCase):
             [])
 
 
+    def test_29_search_covering(self):
+
+        tree = radix.Radix()
+        tree.add('0.0.0.0/2')
+        tree.add('8.9.0.1/32')
+        tree.add('8.9.0.0/16')
+        tree.add('3.178.156.0/24')
+        tree.add('3.178.157.0/24')
+
+        self.assertEquals([n.prefix for n in
+                           tree.search_covering('8.9.0.1/32')],
+                          ['8.9.0.1/32', '8.9.0.0/16', '0.0.0.0/2'])
+        self.assertEquals([n.prefix for n in
+                           tree.search_covering('5.5.5.0/24')],
+                          ['0.0.0.0/2'])
+        self.assertEquals([n.prefix for n in
+                           tree.search_covering('3.178.152.0/21')],
+                          ['0.0.0.0/2'])
+        self.assertEquals([n.prefix for n in
+                           tree.search_covering('205.0.1.0/24')],
+                          [])
+
 
 def main():
     unittest.main()

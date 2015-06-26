@@ -551,6 +551,55 @@ Radix_search_covered(RadixObject *self, PyObject *args, PyObject *kw_args)
         return (ret);
 }
 
+PyDoc_STRVAR(Radix_search_covering_doc,
+"Radix.search_covering(network[, masklen][, packed] -> List of RadixNode\n\
+\n\
+Returns a list of nodes with a less specific or same prefix than network.\n\
+\n\
+If no match is found, then returns an empty list.");
+
+static PyObject *
+Radix_search_covering(RadixObject *self, PyObject *args, PyObject *kw_args)
+{
+        radix_node_t *node;
+        prefix_t *prefix;
+        PyObject *ret;
+
+        static char *keywords[] = { "network", "masklen", "packed", NULL };
+
+        char *addr = NULL, *packed = NULL;
+        long prefixlen = -1;
+        int packlen = -1;
+
+        if (!PyArg_ParseTupleAndKeywords(args, kw_args, "|sls#:search_covering", keywords, &addr, &prefixlen, &packed, &packlen)) {
+                return NULL;
+        }
+
+        if ((prefix = args_to_prefix(addr, packed, packlen, prefixlen)) == NULL) {
+                return NULL;
+        }
+
+        if ((ret = PyList_New(0)) == NULL) {
+                Deref_Prefix(prefix);
+                return NULL;
+        }
+
+        if ((node = radix_search_best(PICKRT(prefix, self), prefix)) == NULL) {
+                Deref_Prefix(prefix);
+                return ret;
+        }
+
+        do
+        {
+                if (node->data != NULL) {
+                        PyList_Append(ret, (PyObject *)node->data);
+                }
+        }
+        while ((node = node->parent) != NULL);
+
+        Deref_Prefix(prefix);
+        return ret;
+}
 
 PyDoc_STRVAR(Radix_nodes_doc,
 "Radix.nodes(prefix) -> List of RadixNode\n\
@@ -633,6 +682,7 @@ static PyMethodDef Radix_methods[] = {
         {"search_best", (PyCFunction)Radix_search_best, METH_VARARGS|METH_KEYWORDS,     Radix_search_best_doc   },
         {"search_worst", (PyCFunction)Radix_search_worst, METH_VARARGS|METH_KEYWORDS,     Radix_search_worst_doc   },
         {"search_covered", (PyCFunction)Radix_search_covered, METH_VARARGS|METH_KEYWORDS,     Radix_search_covered_doc   },
+        {"search_covering",(PyCFunction)Radix_search_covering, METH_VARARGS|METH_KEYWORDS,     Radix_search_covering_doc },
         {"nodes",       (PyCFunction)Radix_nodes,       METH_VARARGS,                   Radix_nodes_doc         },
         {"prefixes",    (PyCFunction)Radix_prefixes,    METH_VARARGS,                   Radix_prefixes_doc      },
         {NULL,          NULL}           /* sentinel */
