@@ -222,9 +222,9 @@ Radix_dealloc(RadixObject *self)
 }
 
 static prefix_t
-*args_to_prefix(char *addr, char *packed, int packlen, long prefixlen)
+*args_to_prefix(prefix_t *prefix, char *addr, char *packed, int packlen, long prefixlen)
 {
-        prefix_t *prefix = NULL;
+        prefix_t *old_prefix = prefix;
         const char *errmsg;
 
         if (addr != NULL && packed != NULL) {
@@ -240,12 +240,12 @@ static prefix_t
         }
 
         if (addr != NULL) {             /* Parse a string address */
-                if ((prefix = prefix_pton(addr, prefixlen, &errmsg)) == NULL) {
+                if ((prefix = prefix_pton_ex(prefix, addr, prefixlen, &errmsg)) == NULL) {
                         PyErr_SetString(PyExc_ValueError, errmsg ? errmsg :
                             "Invalid address format");
                 }
         } else if (packed != NULL) {    /* "parse" a packed binary address */
-                if ((prefix = prefix_from_blob((u_char*)packed, packlen, 
+                if ((prefix = prefix_from_blob_ex(prefix, (u_char*)packed, packlen, 
                     prefixlen)) == NULL) {
                         PyErr_SetString(PyExc_ValueError,
                             "Invalid packed address format");
@@ -253,7 +253,8 @@ static prefix_t
         }
         if (prefix != NULL &&
             prefix->family != AF_INET && prefix->family != AF_INET6) {
-                Deref_Prefix(prefix);
+                if (old_prefix == NULL)
+                        Deref_Prefix(prefix);
                 return (NULL);
         }
 
@@ -322,7 +323,7 @@ Radix_add(RadixObject *self, PyObject *args, PyObject *kw_args)
         if (!PyArg_ParseTupleAndKeywords(args, kw_args, "|sls#:add", keywords,
             &addr, &prefixlen, &packed, &packlen))
                 return NULL;
-        if ((prefix = args_to_prefix(addr, packed, packlen, prefixlen)) == NULL)
+        if ((prefix = args_to_prefix(NULL, addr, packed, packlen, prefixlen)) == NULL)
                 return NULL;
 
         node_obj = create_add_node(self, prefix);
@@ -341,7 +342,7 @@ Radix_delete(RadixObject *self, PyObject *args, PyObject *kw_args)
 {
         radix_node_t *node;
         RadixNodeObject *node_obj;
-        prefix_t *prefix;
+        prefix_t lprefix, *prefix;
         static char *keywords[] = { "network", "masklen", "packed", NULL };
 
         char *addr = NULL, *packed = NULL;
@@ -351,10 +352,9 @@ Radix_delete(RadixObject *self, PyObject *args, PyObject *kw_args)
         if (!PyArg_ParseTupleAndKeywords(args, kw_args, "|sls#:delete", keywords,
             &addr, &prefixlen, &packed, &packlen))
                 return NULL;
-        if ((prefix = args_to_prefix(addr, packed, packlen, prefixlen)) == NULL)
+        if ((prefix = args_to_prefix(&lprefix, addr, packed, packlen, prefixlen)) == NULL)
                 return NULL;
         if ((node = radix_search_exact(self->rt, prefix)) == NULL) {
-                Deref_Prefix(prefix);
                 PyErr_SetString(PyExc_KeyError, "no such address");
                 return NULL;
         }
@@ -365,7 +365,6 @@ Radix_delete(RadixObject *self, PyObject *args, PyObject *kw_args)
         }
 
         radix_remove(self->rt, node);
-        Deref_Prefix(prefix);
 
         self->gen_id++;
         Py_INCREF(Py_None);
@@ -386,7 +385,7 @@ Radix_search_exact(RadixObject *self, PyObject *args, PyObject *kw_args)
 {
         radix_node_t *node;
         RadixNodeObject *node_obj;
-        prefix_t *prefix;
+        prefix_t lprefix, *prefix;
         static char *keywords[] = { "network", "masklen", "packed", NULL };
 
         char *addr = NULL, *packed = NULL;
@@ -396,16 +395,14 @@ Radix_search_exact(RadixObject *self, PyObject *args, PyObject *kw_args)
         if (!PyArg_ParseTupleAndKeywords(args, kw_args, "|sls#:search_exact", keywords,
             &addr, &prefixlen, &packed, &packlen))
                 return NULL;
-        if ((prefix = args_to_prefix(addr, packed, packlen, prefixlen)) == NULL)
+        if ((prefix = args_to_prefix(&lprefix, addr, packed, packlen, prefixlen)) == NULL)
                 return NULL;
 
         node = radix_search_exact(self->rt, prefix);
         if (node == NULL || node->data == NULL) {
-                Deref_Prefix(prefix);
                 Py_INCREF(Py_None);
                 return Py_None;
         }
-        Deref_Prefix(prefix);
         node_obj = node->data;
         Py_XINCREF(node_obj);
         return (PyObject *)node_obj;
@@ -426,7 +423,7 @@ Radix_search_best(RadixObject *self, PyObject *args, PyObject *kw_args)
 {
         radix_node_t *node;
         RadixNodeObject *node_obj;
-        prefix_t *prefix;
+        prefix_t lprefix, *prefix;
         static char *keywords[] = { "network", "masklen", "packed", NULL };
 
         char *addr = NULL, *packed = NULL;
@@ -436,16 +433,14 @@ Radix_search_best(RadixObject *self, PyObject *args, PyObject *kw_args)
         if (!PyArg_ParseTupleAndKeywords(args, kw_args, "|sls#:search_best", keywords,
             &addr, &prefixlen, &packed, &packlen))
                 return NULL;
-        if ((prefix = args_to_prefix(addr, packed, packlen, prefixlen)) == NULL)
+        if ((prefix = args_to_prefix(&lprefix, addr, packed, packlen, prefixlen)) == NULL)
                 return NULL;
 
         if ((node = radix_search_best(self->rt, prefix)) == NULL || 
             node->data == NULL) {
-                Deref_Prefix(prefix);
                 Py_INCREF(Py_None);
                 return Py_None;
         }
-        Deref_Prefix(prefix);
         node_obj = node->data;
         Py_XINCREF(node_obj);
         return (PyObject *)node_obj;
@@ -466,7 +461,7 @@ Radix_search_worst(RadixObject *self, PyObject *args, PyObject *kw_args)
 {
         radix_node_t *node;
         RadixNodeObject *node_obj;
-        prefix_t *prefix;
+        prefix_t lprefix, *prefix;
         static char *keywords[] = { "network", "masklen", "packed", NULL };
 
         char *addr = NULL, *packed = NULL;
@@ -476,16 +471,14 @@ Radix_search_worst(RadixObject *self, PyObject *args, PyObject *kw_args)
         if (!PyArg_ParseTupleAndKeywords(args, kw_args, "|sls#:search_worst", keywords,
             &addr, &prefixlen, &packed, &packlen))
                 return NULL;
-        if ((prefix = args_to_prefix(addr, packed, packlen, prefixlen)) == NULL)
+        if ((prefix = args_to_prefix(&lprefix, addr, packed, packlen, prefixlen)) == NULL)
                 return NULL;
 
         if ((node = radix_search_worst(self->rt, prefix)) == NULL || 
             node->data == NULL) {
-                Deref_Prefix(prefix);
                 Py_INCREF(Py_None);
                 return Py_None;
         }
-        Deref_Prefix(prefix);
         node_obj = node->data;
         Py_XINCREF(node_obj);
         return (PyObject *)node_obj;
@@ -501,7 +494,7 @@ Radix_search_covered(RadixObject *self, PyObject *args, PyObject *kw_args)
 {
         radix_node_t *node;
         radix_node_t *node_iter;
-        prefix_t *prefix;
+        prefix_t lprefix, *prefix;
         PyObject *ret;
 
         static char *keywords[] = { "network", "masklen", "packed", NULL };
@@ -513,14 +506,13 @@ Radix_search_covered(RadixObject *self, PyObject *args, PyObject *kw_args)
         if (!PyArg_ParseTupleAndKeywords(args, kw_args, "|sls#:search_covered", keywords, &addr, &prefixlen, &packed, &packlen))
                 return NULL;
 
-        if ((prefix = args_to_prefix(addr, packed, packlen, prefixlen)) == NULL)
+        if ((prefix = args_to_prefix(&lprefix, addr, packed, packlen, prefixlen)) == NULL)
                 return NULL;
 
         if ((ret = PyList_New(0)) == NULL)
                 return NULL;
 
         if ((node = radix_search_node(self->rt, prefix)) == NULL) {
-                Deref_Prefix(prefix);
                 return ret;
         }
 
@@ -530,7 +522,6 @@ Radix_search_covered(RadixObject *self, PyObject *args, PyObject *kw_args)
                 }
         } RADIX_WALK_END;
 
-        Deref_Prefix(prefix);
         return (ret);
 }
 
@@ -545,7 +536,7 @@ static PyObject *
 Radix_search_covering(RadixObject *self, PyObject *args, PyObject *kw_args)
 {
         radix_node_t *node;
-        prefix_t *prefix;
+        prefix_t lprefix, *prefix;
         PyObject *ret;
 
         static char *keywords[] = { "network", "masklen", "packed", NULL };
@@ -558,17 +549,15 @@ Radix_search_covering(RadixObject *self, PyObject *args, PyObject *kw_args)
                 return NULL;
         }
 
-        if ((prefix = args_to_prefix(addr, packed, packlen, prefixlen)) == NULL) {
+        if ((prefix = args_to_prefix(&lprefix, addr, packed, packlen, prefixlen)) == NULL) {
                 return NULL;
         }
 
         if ((ret = PyList_New(0)) == NULL) {
-                Deref_Prefix(prefix);
                 return NULL;
         }
 
         if ((node = radix_search_best(self->rt, prefix)) == NULL) {
-                Deref_Prefix(prefix);
                 return ret;
         }
 
@@ -580,7 +569,6 @@ Radix_search_covering(RadixObject *self, PyObject *args, PyObject *kw_args)
         }
         while ((node = node->parent) != NULL);
 
-        Deref_Prefix(prefix);
         return ret;
 }
 
