@@ -157,6 +157,8 @@ void radix_process(radix_tree_t *radix, rdx_cb_t func, void *cbctx);
 
 prefix_t *prefix_pton(const char *string, long len, const char **errmsg);
 prefix_t *prefix_from_blob(u_char *blob, int len, int prefixlen);
+prefix_t *prefix_pton_ex(prefix_t *prefix, const char *string, long len, const char **errmsg);
+prefix_t *prefix_from_blob_ex(prefix_t *prefix, u_char *blob, int len, int prefixlen);
 const char *prefix_addr_ntop(prefix_t *prefix, char *buf, size_t len);
 const char *prefix_ntop(prefix_t *prefix, char *buf, size_t len);
 

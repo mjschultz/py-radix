@@ -683,16 +683,13 @@ sanitise_mask(u_char *addr, u_int masklen, u_int maskbits)
 }
 
 prefix_t
-*prefix_pton(const char *string, long len, const char **errmsg)
+*prefix_pton_ex(prefix_t *ret, const char *string, long len, const char **errmsg)
 {
         char save[256], *cp, *ep;
         struct addrinfo hints, *ai;
         void *addr;
-        prefix_t *ret;
         size_t slen;
         int r;
-
-        ret = NULL;
 
         /* Copy the string to parse, because we modify it */
         if ((slen = strlen(string) + 1) > sizeof(save)) {
@@ -750,7 +747,7 @@ prefix_t
                 goto out;
         }
 
-        ret = New_Prefix2(ai->ai_addr->sa_family, addr, len, NULL);
+        ret = New_Prefix2(ai->ai_addr->sa_family, addr, len, ret);
         if (ret == NULL)
                 *errmsg = "New_Prefix2 failed";
 out:
@@ -759,7 +756,13 @@ out:
 }
 
 prefix_t
-*prefix_from_blob(u_char *blob, int len, int prefixlen)
+*prefix_pton(const char *string, long len, const char **errmsg)
+{
+	return (prefix_pton_ex(NULL, string, len, errmsg));
+}
+
+prefix_t
+*prefix_from_blob_ex(prefix_t *ret, u_char *blob, int len, int prefixlen)
 {
         int family, maxprefix;
 
@@ -782,7 +785,13 @@ prefix_t
                 prefixlen = maxprefix;
         if (prefixlen < 0 || prefixlen > maxprefix)
                 return NULL;
-        return (New_Prefix2(family, blob, prefixlen, NULL));
+        return (New_Prefix2(family, blob, prefixlen, ret));
+}
+
+prefix_t
+*prefix_from_blob(u_char *blob, int len, int prefixlen)
+{
+	return (prefix_from_blob_ex(NULL, blob, len, prefixlen));
 }
 
 const char *
