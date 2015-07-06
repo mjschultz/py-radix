@@ -90,8 +90,7 @@
 #define RADIX_SEARCH_FOREACH_INCLUSIVE(node, head, prefix) \
         for ((node) = (head); \
              (node) != NULL && (node)->bit <= (prefix)->bitlen; \
-             (node) = (((node)->bit == (prefix)->bitlen) ? NULL : \
-                       BIT_TEST_SEARCH(prefix_touchar(prefix), node) ? (node)->r : (node)->l))
+             (node) = BIT_TEST_SEARCH(prefix_touchar(prefix), node) ? (node)->r : (node)->l)
 
 #define RADIX_PHEAD_BY_PREFIX(tree, prefix) \
         ((prefix)->family == AF_INET ? &(tree)->head_ipv4 : &(tree)->head_ipv6)
