@@ -199,7 +199,7 @@ radix_tree_t
  * if func is supplied, it will be called as func(node->data)
  * before deleting the node
  */
-static void
+void
 Clear_Radix(radix_tree_t *radix, rdx_cb_t func, void *cbctx)
 {
         if (radix->head) {
