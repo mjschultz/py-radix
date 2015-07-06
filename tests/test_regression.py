@@ -415,11 +415,11 @@ class TestRadix(unittest.TestCase):
             [n.prefix for n in tree.search_covered('11.0.0.0/8')],
             ['11.0.0.0/16'])
         self.assertEquals(
-            [n.prefix for n in tree.search_covered('10.0.0.0/9')],
+            sorted([n.prefix for n in tree.search_covered('10.0.0.0/9')]),
             ['10.0.0.0/13', '10.0.0.0/31'])
         self.assertEquals(
-            [n.prefix for n in tree.search_covered('10.0.0.0/8')],
-            ['10.0.0.0/8', '10.0.0.0/13', '10.0.0.0/31'])
+            sorted([n.prefix for n in tree.search_covered('10.0.0.0/8')]),
+            ['10.0.0.0/13', '10.0.0.0/31', '10.0.0.0/8'])
         self.assertEquals(
             [n.prefix for n in tree.search_covered('11.0.0.0/8')],
             ['11.0.0.0/16'])
@@ -427,8 +427,8 @@ class TestRadix(unittest.TestCase):
             [n.prefix for n in tree.search_covered('21.0.0.0/8')],
             [])
         self.assertEquals(
-            [n.prefix for n in tree.search_covered('0.0.0.0/0')],
-            ['10.0.0.0/8', '10.0.0.0/13', '10.0.0.0/31', '11.0.0.0/16'])
+            sorted([n.prefix for n in tree.search_covered('0.0.0.0/0')]),
+            ['10.0.0.0/13', '10.0.0.0/31', '10.0.0.0/8', '11.0.0.0/16'])
 
 
     def test_27_search_covered_segfault(self):

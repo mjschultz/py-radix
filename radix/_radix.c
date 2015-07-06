@@ -484,6 +484,16 @@ Radix_search_worst(RadixObject *self, PyObject *args, PyObject *kw_args)
         return (PyObject *)node_obj;
 }
 
+static int
+add_node_to_list(radix_node_t *node, void *arg)
+{
+        PyObject *ret = arg;
+
+        if (node->data != NULL)
+                PyList_Append(ret, ((RadixNodeObject *)node->data));
+        return (0);
+}
+
 PyDoc_STRVAR(Radix_search_covered_doc,
 "Radix.search_covered(network[, masklen][, packed] -> None\n\
 \n\
@@ -492,8 +502,6 @@ FIXME");
 static PyObject *
 Radix_search_covered(RadixObject *self, PyObject *args, PyObject *kw_args)
 {
-        radix_node_t *node;
-        radix_node_t *node_iter;
         prefix_t lprefix, *prefix;
         PyObject *ret;
 
@@ -512,15 +520,7 @@ Radix_search_covered(RadixObject *self, PyObject *args, PyObject *kw_args)
         if ((ret = PyList_New(0)) == NULL)
                 return NULL;
 
-        if ((node = radix_search_node(self->rt, prefix)) == NULL) {
-                return ret;
-        }
-
-        RADIX_WALK(node, node_iter) {
-                if (node_iter->data != NULL) {
-                        PyList_Append(ret, ((RadixNodeObject *)node_iter->data));
-                }
-        } RADIX_WALK_END;
+        radix_search_covered(self->rt, prefix, add_node_to_list, ret, 1);
 
         return (ret);
 }
@@ -535,7 +535,6 @@ If no match is found, then returns an empty list.");
 static PyObject *
 Radix_search_covering(RadixObject *self, PyObject *args, PyObject *kw_args)
 {
-        radix_node_t *node;
         prefix_t lprefix, *prefix;
         PyObject *ret;
 
@@ -557,17 +556,7 @@ Radix_search_covering(RadixObject *self, PyObject *args, PyObject *kw_args)
                 return NULL;
         }
 
-        if ((node = radix_search_best(self->rt, prefix)) == NULL) {
-                return ret;
-        }
-
-        do
-        {
-                if (node->data != NULL) {
-                        PyList_Append(ret, (PyObject *)node->data);
-                }
-        }
-        while ((node = node->parent) != NULL);
+        radix_search_covering(self->rt, prefix, add_node_to_list, ret);
 
         return ret;
 }
