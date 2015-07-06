@@ -116,6 +116,7 @@ typedef struct _radix_tree_t {
 
 /* Type of callback function */
 typedef void (*rdx_cb_t)(radix_node_t *, void *);
+typedef int (*rdx_search_cb_t)(radix_node_t *, void *);
 
 radix_tree_t *New_Radix(void);
 void Destroy_Radix(radix_tree_t *radix, rdx_cb_t func, void *cbctx);
@@ -128,6 +129,9 @@ radix_node_t *radix_search_best(radix_tree_t *radix, prefix_t *prefix);
 radix_node_t *radix_search_best2(radix_tree_t *radix, prefix_t *prefix, int inclusive);
 radix_node_t *radix_search_worst(radix_tree_t *radix, prefix_t *prefix);
 radix_node_t *radix_search_worst2(radix_tree_t *radix, prefix_t *prefix, int inclusive);
+int radix_search_covering(radix_tree_t *radix, prefix_t *prefix, rdx_search_cb_t func, void *cbctx);
+int radix_search_covered(radix_tree_t *radix, prefix_t *prefix, rdx_search_cb_t func, void *cbctx, int inclusive);
+int radix_search_intersect(radix_tree_t *radix, prefix_t *prefix, rdx_search_cb_t func, void *cbctx);
 void radix_process(radix_tree_t *radix, rdx_cb_t func, void *cbctx);
 
 #define RADIX_MAXBITS 128

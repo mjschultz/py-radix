@@ -100,6 +100,8 @@
 #define RADIX_MAXBITS_BY_PREFIX(prefix) \
         ((prefix)->family == AF_INET ? 32 : 128)
 
+#define RADIX_MIN(a, b) ((a) < (b) ? (a) : (b))
+
 /*
  * Originally from MRT lib/mrt/prefix.c
  * $MRTId: prefix.c,v 1.1.1.1 2000/08/14 18:46:11 labovit Exp $
@@ -435,6 +437,129 @@ radix_node_t
         return (radix_search_worst2(radix, prefix, 1));
 }
 
+
+int
+radix_search_covering(radix_tree_t *radix, prefix_t *prefix, rdx_search_cb_t func, void *cbctx)
+{
+        radix_node_t *node;
+        int rc = 0;
+
+        node = radix_search_best(radix, prefix);
+        if (node == NULL)
+                return (0);
+
+        do {
+                if (!node->prefix)
+                        continue;
+                if ((rc = func(node, cbctx)) != 0)
+                        break;
+        } while ((node = node->parent) != NULL);
+
+        return (rc);
+}
+
+int
+radix_search_covered(radix_tree_t *radix, prefix_t *prefix, rdx_search_cb_t func, void *cbctx, int inclusive)
+{
+        radix_node_t *node, *prefixed_node, *prev_node;
+        struct {
+                radix_node_t *node;
+                enum {
+                        RADIX_STATE_LEFT = 0,
+                        RADIX_STATE_RIGHT,
+                        RADIX_STATE_SELF,
+                } state;
+                int checked;
+        } stack[RADIX_MAXBITS + 1], *pst;
+        int stackpos;
+        int rc;
+
+#define COMP_NODE_PREFIX(node, prefix_) \
+        comp_with_mask(prefix_touchar((node)->prefix), \
+                       prefix_touchar(prefix_), \
+                       RADIX_MIN((node)->prefix->bitlen, (prefix_)->bitlen))
+
+        prev_node = NULL;
+        prefixed_node = NULL;
+        RADIX_SEARCH_FOREACH_INCLUSIVE(
+                node, RADIX_HEAD_BY_PREFIX(radix, prefix), prefix) {
+
+                prev_node = node;
+                if (node->bit == prefix->bitlen)
+                        break;
+                if (node->prefix != NULL)
+                        prefixed_node = node;
+        }
+
+        if (node == NULL) {
+                if (prev_node == NULL)
+                        return (0);
+                node = prev_node;
+        } else  {
+                /* node->bit >= prefix->bitlen */
+
+                if (node->prefix != NULL)
+                        prefixed_node = node;
+        }
+        if (prefixed_node != NULL && !COMP_NODE_PREFIX(prefixed_node, prefix))
+                return (0);
+
+        stack[0].state = RADIX_STATE_LEFT;
+        stack[0].node = node;
+        stack[0].checked = (node == prefixed_node);
+        stackpos = 0;
+
+        while (stackpos >= 0) {
+                pst = stack + stackpos;
+
+                switch (pst->state) {
+                case RADIX_STATE_LEFT:
+                case RADIX_STATE_RIGHT:
+                        if (pst->state == RADIX_STATE_LEFT) {
+                                pst->state = RADIX_STATE_RIGHT;
+                                node = pst->node->l;
+                        } else {
+                                pst->state = RADIX_STATE_SELF;
+                                node = pst->node->r;
+                        }
+                        if (node == NULL)
+                                continue;
+
+                        /* skip foreign nodes */
+                        if (!pst->checked && node->prefix != NULL &&
+                            !COMP_NODE_PREFIX(node, prefix))
+                                continue;
+                        stackpos++;
+                        pst = stack + stackpos;
+                        pst->state = RADIX_STATE_LEFT;
+                        pst->node = node;
+                        pst->checked = (pst[-1].checked || node->prefix != NULL);
+                        break;
+                case RADIX_STATE_SELF:
+                        if (inclusive || stackpos > 0 || pst->node->bit > prefix->bitlen) {
+                                if (pst->node->prefix != NULL &&
+                                    (rc = func(pst->node, cbctx)) != 0)
+                                        return (rc);
+                        }
+
+                        stackpos--;
+                        break;
+                }
+        }
+#undef COMP_NODE_PREFIX
+        return (0);
+}
+
+int
+radix_search_intersect(radix_tree_t *radix, prefix_t *prefix, rdx_search_cb_t func, void *cbctx)
+{
+        int rc;
+
+        if ((rc = radix_search_covering(radix, prefix, func, cbctx)) == 0)
+                rc = radix_search_covered(radix, prefix, func, cbctx, 0);
+
+        return (rc);
+}
 
 radix_node_t
 *radix_lookup(radix_tree_t *radix, prefix_t *prefix)
