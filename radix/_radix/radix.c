@@ -82,6 +82,17 @@
 #define prefix_tochar(prefix)           ((char *)&(prefix)->add)
 #define prefix_touchar(prefix)          ((u_char *)&(prefix)->add)
 
+#define RADIX_SEARCH_FOREACH(node, head, prefix) \
+        for ((node) = (head); \
+             (node) != NULL && (node)->bit < (prefix)->bitlen; \
+             (node) = BIT_TEST_SEARCH(prefix_touchar(prefix), node) ? (node)->r : (node)->l)
+
+#define RADIX_SEARCH_FOREACH_INCLUSIVE(node, head, prefix) \
+        for ((node) = (head); \
+             (node) != NULL && (node)->bit <= (prefix)->bitlen; \
+             (node) = (((node)->bit == (prefix)->bitlen) ? NULL : \
+                       BIT_TEST_SEARCH(prefix_touchar(prefix), node) ? (node)->r : (node)->l))
+
 /*
  * Originally from MRT lib/mrt/prefix.c
  * $MRTId: prefix.c,v 1.1.1.1 2000/08/14 18:46:11 labovit Exp $
@@ -247,27 +258,16 @@ radix_node_t
 *radix_search_exact(radix_tree_t *radix, prefix_t *prefix)
 {
         radix_node_t *node;
-        u_char *addr;
         u_int bitlen;
 
         if (radix->head == NULL)
                 return (NULL);
 
-        node = radix->head;
-        addr = prefix_touchar(prefix);
         bitlen = prefix->bitlen;
 
-        while (node->bit < bitlen) {
-                if (BIT_TEST_SEARCH(addr, node))
-                        node = node->r;
-                else
-                        node = node->l;
+        RADIX_SEARCH_FOREACH(node, radix->head, prefix);
 
-                if (node == NULL)
-                        return (NULL);
-        }
-
-        if (node->bit > bitlen || node->prefix == NULL)
+        if (node == NULL || node->bit > bitlen || node->prefix == NULL)
                 return (NULL);
 
         if (comp_with_mask(prefix_touchar(node->prefix),
@@ -283,25 +283,17 @@ radix_node_t
 *radix_search_node(radix_tree_t *radix, prefix_t *prefix)
 {
         radix_node_t *node;
-        u_char *addr;
         u_int bitlen;
 
         if (radix->head == NULL)
                 return (NULL);
 
-        node = radix->head;
-        addr = prefix_touchar(prefix);
         bitlen = prefix->bitlen;
 
-        while (node->bit < bitlen) {
-                if (BIT_TEST_SEARCH(addr, node))
-                        node = node->r;
-                else
-                        node = node->l;
+        RADIX_SEARCH_FOREACH(node, radix->head, prefix);
 
-                if (node == NULL)
-                        return (NULL);
-        }
+        if (node == NULL)
+                return (NULL);
 
         // if the node has a prefix we can (and must to avoid false negatives) check directly
         if (node->prefix) {
@@ -357,32 +349,18 @@ radix_node_t
 {
         radix_node_t *node;
         radix_node_t *stack[RADIX_MAXBITS + 1];
-        u_char *addr;
         u_int bitlen;
         int cnt = 0;
 
         if (radix->head == NULL)
                 return (NULL);
 
-        node = radix->head;
-        addr = prefix_touchar(prefix);
         bitlen = prefix->bitlen;
 
-        while (node->bit < bitlen) {
-                if (node->prefix)
-                        stack[cnt++] = node;
-                if (BIT_TEST_SEARCH(addr, node))
-                        node = node->r;
-                else
-                        node = node->l;
-
-                if (node == NULL)
-                        break;
+        RADIX_SEARCH_FOREACH_INCLUSIVE(node, radix->head, prefix) {
+                if (node->prefix && (inclusive || node->bit != bitlen))
+                    stack[cnt++] = node;
         }
-
-        if (inclusive && node && node->prefix)
-                stack[cnt++] = node;
-
 
         if (cnt <= 0)
                 return (NULL);
@@ -410,7 +388,6 @@ radix_node_t
 {
         radix_node_t *node;
         radix_node_t *stack[RADIX_MAXBITS + 1];
-        u_char *addr;
         u_int bitlen;
         int cnt = 0;
         int iterator;
@@ -418,25 +395,12 @@ radix_node_t
         if (radix->head == NULL)
                 return (NULL);
 
-        node = radix->head;
-        addr = prefix_touchar(prefix);
         bitlen = prefix->bitlen;
 
-        while (node->bit < bitlen) {
-                if (node->prefix)
-                        stack[cnt++] = node;
-                if (BIT_TEST_SEARCH(addr, node))
-                        node = node->r;
-                else
-                        node = node->l;
-
-                if (node == NULL)
-                        break;
+        RADIX_SEARCH_FOREACH_INCLUSIVE(node, radix->head, prefix) {
+                if (node->prefix && (inclusive || node->bit != bitlen))
+                    stack[cnt++] = node;
         }
-
-        if (inclusive && node && node->prefix)
-                stack[cnt++] = node;
-
 
         if (cnt <= 0)
                 return (NULL);
