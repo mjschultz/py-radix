@@ -71,6 +71,9 @@
  * $MRTId: defs.h,v 1.1.1.1 2000/08/14 18:46:10 labovit Exp $
  */
 #define BIT_TEST(f, b)  ((f) & (b))
+#define BIT_TEST_SEARCH_BIT(addr, bit) \
+        BIT_TEST((addr)[(bit) >> 3], 0x80 >> ((bit) & 0x07))
+#define BIT_TEST_SEARCH(addr, node) BIT_TEST_SEARCH_BIT(addr, (node)->bit)
 
 /*
  * Originally from MRT include/mrt.h
@@ -255,7 +258,7 @@ radix_node_t
         bitlen = prefix->bitlen;
 
         while (node->bit < bitlen) {
-                if (BIT_TEST(addr[node->bit >> 3], 0x80 >> (node->bit & 0x07)))
+                if (BIT_TEST_SEARCH(addr, node))
                         node = node->r;
                 else
                         node = node->l;
@@ -291,7 +294,7 @@ radix_node_t
         bitlen = prefix->bitlen;
 
         while (node->bit < bitlen) {
-                if (BIT_TEST(addr[node->bit >> 3], 0x80 >> (node->bit & 0x07)))
+                if (BIT_TEST_SEARCH(addr, node))
                         node = node->r;
                 else
                         node = node->l;
@@ -368,7 +371,7 @@ radix_node_t
         while (node->bit < bitlen) {
                 if (node->prefix)
                         stack[cnt++] = node;
-                if (BIT_TEST(addr[node->bit >> 3], 0x80 >> (node->bit & 0x07)))
+                if (BIT_TEST_SEARCH(addr, node))
                         node = node->r;
                 else
                         node = node->l;
@@ -422,7 +425,7 @@ radix_node_t
         while (node->bit < bitlen) {
                 if (node->prefix)
                         stack[cnt++] = node;
-                if (BIT_TEST(addr[node->bit >> 3], 0x80 >> (node->bit & 0x07)))
+                if (BIT_TEST_SEARCH(addr, node))
                         node = node->r;
                 else
                         node = node->l;
@@ -481,8 +484,7 @@ radix_node_t
         node = radix->head;
 
         while (node->bit < bitlen || node->prefix == NULL) {
-                if (node->bit < radix->maxbits && BIT_TEST(addr[node->bit >> 3],
-                    0x80 >> (node->bit & 0x07))) {
+                if (node->bit < radix->maxbits && BIT_TEST_SEARCH(addr, node)) {
                         if (node->r == NULL)
                                 break;
                         node = node->r;
@@ -537,8 +539,7 @@ radix_node_t
 
         if (node->bit == differ_bit) {
                 new_node->parent = node;
-                if (node->bit < radix->maxbits && BIT_TEST(addr[node->bit >> 3],
-                    0x80 >> (node->bit & 0x07)))
+                if (node->bit < radix->maxbits && BIT_TEST_SEARCH(addr, node))
                         node->r = new_node;
                 else
                         node->l = new_node;
@@ -546,8 +547,8 @@ radix_node_t
                 return (new_node);
         }
         if (bitlen == differ_bit) {
-                if (bitlen < radix->maxbits && BIT_TEST(test_addr[bitlen >> 3],
-                    0x80 >> (bitlen & 0x07)))
+                if (bitlen < radix->maxbits &&
+                    BIT_TEST_SEARCH_BIT(test_addr, bitlen))
                         new_node->r = node;
                 else
                         new_node->l = node;
@@ -571,8 +572,7 @@ radix_node_t
                 glue->data = NULL;
                 radix->num_active_node++;
                 if (differ_bit < radix->maxbits &&
-                    BIT_TEST(addr[differ_bit >> 3],
-                    0x80 >> (differ_bit & 0x07))) {
+                    BIT_TEST_SEARCH_BIT(addr, differ_bit)) {
                         glue->r = new_node;
                         glue->l = node;
                 } else {
