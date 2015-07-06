@@ -267,8 +267,8 @@ radix_node_t
         if (node->bit > bitlen || node->prefix == NULL)
                 return (NULL);
 
-        if (comp_with_mask(prefix_tochar(node->prefix),
-            prefix_tochar(prefix), bitlen))
+        if (comp_with_mask(prefix_touchar(node->prefix),
+            prefix_touchar(prefix), bitlen))
                 return (node);
 
         return (NULL);
@@ -302,7 +302,7 @@ radix_node_t
 
         // if the node has a prefix we can (and must to avoid false negatives) check directly
         if (node->prefix) {
-                if (comp_with_mask(prefix_tochar(node->prefix), prefix_tochar(prefix), bitlen))
+                if (comp_with_mask(prefix_touchar(node->prefix), prefix_touchar(prefix), bitlen))
                         return (node);
                 else
                         return (NULL);
@@ -318,7 +318,7 @@ radix_node_t
 
         RADIX_WALK(node->r, node_iter) {
             if (node_iter->data != NULL) {
-                if ( ! comp_with_mask(prefix_tochar(node_iter->prefix), prefix_tochar(prefix), bitlen)) {
+                if ( ! comp_with_mask(prefix_touchar(node_iter->prefix), prefix_touchar(prefix), bitlen)) {
                     right_mismatch = 1;
                     break;
                 }
@@ -327,7 +327,7 @@ radix_node_t
 
         RADIX_WALK(node->l, node_iter) {
             if (node_iter->data != NULL) {
-                if ( ! comp_with_mask(prefix_tochar(node_iter->prefix), prefix_tochar(prefix), bitlen)) {
+                if ( ! comp_with_mask(prefix_touchar(node_iter->prefix), prefix_touchar(prefix), bitlen)) {
                     left_mismatch = 1;
                     break;
                 }
@@ -386,8 +386,8 @@ static radix_node_t
 
         while (--cnt >= 0) {
                 node = stack[cnt];
-                if (comp_with_mask(prefix_tochar(node->prefix),
-                    prefix_tochar(prefix), node->prefix->bitlen) &&
+                if (comp_with_mask(prefix_touchar(node->prefix),
+                    prefix_touchar(prefix), node->prefix->bitlen) &&
                     node->prefix->bitlen <= bitlen)
                         return (node);
         }
@@ -410,7 +410,7 @@ static radix_node_t
         u_char *addr;
         u_int bitlen;
         int cnt = 0;
-        int iterator = 0;
+        int iterator;
 
         if (radix->head == NULL)
                 return (NULL);
@@ -438,10 +438,10 @@ static radix_node_t
         if (cnt <= 0)
                 return (NULL);
         
-        for (iterator; iterator < cnt; ++iterator) {
+        for (iterator = 0; iterator < cnt; ++iterator) {
                 node = stack[iterator];
-                if (comp_with_mask(prefix_tochar(node->prefix),
-                    prefix_tochar(prefix), node->prefix->bitlen)) 
+                if (comp_with_mask(prefix_touchar(node->prefix),
+                    prefix_touchar(prefix), node->prefix->bitlen)) 
                         return (node);
         }
         return (NULL);
