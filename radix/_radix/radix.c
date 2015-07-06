@@ -349,7 +349,7 @@ radix_node_t
 
 
 /* if inclusive != 0, "best" may be the given prefix itself */
-static radix_node_t
+radix_node_t
 *radix_search_best2(radix_tree_t *radix, prefix_t *prefix, int inclusive)
 {
         radix_node_t *node;
@@ -402,7 +402,7 @@ radix_node_t
 }
 
 /* if inclusive != 0, "worst" may be the given prefix itself */
-static radix_node_t
+radix_node_t
 *radix_search_worst2(radix_tree_t *radix, prefix_t *prefix, int inclusive)
 {
         radix_node_t *node;
