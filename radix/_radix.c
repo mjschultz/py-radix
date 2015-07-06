@@ -177,8 +177,7 @@ static PyTypeObject RadixNode_Type = {
 
 typedef struct _RadixObject {
         PyObject_HEAD
-        radix_tree_t *rt4;      /* Radix tree for IPv4 addresses */
-        radix_tree_t *rt6;      /* Radix tree for IPv6 addresses */
+        radix_tree_t *rt;       /* Radix tree for IPv4 & IPv6 addresses */
         unsigned int gen_id;    /* Detect modification during iterations */
 } RadixObject;
 
@@ -189,21 +188,15 @@ static RadixObject *
 newRadixObject(void)
 {
         RadixObject *self;
-        radix_tree_t *rt4, *rt6;
+        radix_tree_t *rt;
 
-        if ((rt4 = New_Radix()) == NULL)
+        if ((rt = New_Radix()) == NULL)
                 return (NULL);
-        if ((rt6 = New_Radix()) == NULL) {
-                free(rt4);
-                return (NULL);
-        }
         if ((self = PyObject_New(RadixObject, &Radix_Type)) == NULL) {
-                free(rt4);
-                free(rt6);
+                free(rt);
                 return (NULL);
         }
-        self->rt4 = rt4;
-        self->rt6 = rt6;
+        self->rt = rt;
         self->gen_id = 0;
         return (self);
 }
@@ -216,23 +209,15 @@ Radix_dealloc(RadixObject *self)
         radix_node_t *rn;
         RadixNodeObject *node;
 
-        RADIX_WALK(self->rt4->head, rn) {
+        RADIX_TREE_WALK(self->rt, rn) {
                 if (rn->data != NULL) {
                         node = rn->data;
                         node->rn = NULL;
                         Py_DECREF(node);
                 }
-        } RADIX_WALK_END;
-        RADIX_WALK(self->rt6->head, rn) {
-                if (rn->data != NULL) {
-                        node = rn->data;
-                        node->rn = NULL;
-                        Py_DECREF(node);
-                }
-        } RADIX_WALK_END;
+        } RADIX_TREE_WALK_END;
 
-        Destroy_Radix(self->rt4, NULL, NULL);
-        Destroy_Radix(self->rt6, NULL, NULL);
+        Destroy_Radix(self->rt, NULL, NULL);
         PyObject_Del(self);
 }
 
@@ -275,15 +260,13 @@ static prefix_t
         return prefix;
 }
 
-#define PICKRT(prefix, rno) (prefix->family == AF_INET6 ? rno->rt6 : rno->rt4)
-
 static PyObject *
 create_add_node(RadixObject *self, prefix_t *prefix)
 {
         radix_node_t *node;
         RadixNodeObject *node_obj;
 
-        if ((node = radix_lookup(PICKRT(prefix, self), prefix)) == NULL) {
+        if ((node = radix_lookup(self->rt, prefix)) == NULL) {
                 PyErr_SetString(PyExc_MemoryError, "Couldn't add prefix");
                 return NULL;
         }
@@ -370,7 +353,7 @@ Radix_delete(RadixObject *self, PyObject *args, PyObject *kw_args)
                 return NULL;
         if ((prefix = args_to_prefix(addr, packed, packlen, prefixlen)) == NULL)
                 return NULL;
-        if ((node = radix_search_exact(PICKRT(prefix, self), prefix)) == NULL) {
+        if ((node = radix_search_exact(self->rt, prefix)) == NULL) {
                 Deref_Prefix(prefix);
                 PyErr_SetString(PyExc_KeyError, "no such address");
                 return NULL;
@@ -381,7 +364,7 @@ Radix_delete(RadixObject *self, PyObject *args, PyObject *kw_args)
                 Py_XDECREF(node_obj);
         }
 
-        radix_remove(PICKRT(prefix, self), node);
+        radix_remove(self->rt, node);
         Deref_Prefix(prefix);
 
         self->gen_id++;
@@ -416,7 +399,7 @@ Radix_search_exact(RadixObject *self, PyObject *args, PyObject *kw_args)
         if ((prefix = args_to_prefix(addr, packed, packlen, prefixlen)) == NULL)
                 return NULL;
 
-        node = radix_search_exact(PICKRT(prefix, self), prefix);
+        node = radix_search_exact(self->rt, prefix);
         if (node == NULL || node->data == NULL) {
                 Deref_Prefix(prefix);
                 Py_INCREF(Py_None);
@@ -456,7 +439,7 @@ Radix_search_best(RadixObject *self, PyObject *args, PyObject *kw_args)
         if ((prefix = args_to_prefix(addr, packed, packlen, prefixlen)) == NULL)
                 return NULL;
 
-        if ((node = radix_search_best(PICKRT(prefix, self), prefix)) == NULL || 
+        if ((node = radix_search_best(self->rt, prefix)) == NULL || 
             node->data == NULL) {
                 Deref_Prefix(prefix);
                 Py_INCREF(Py_None);
@@ -496,7 +479,7 @@ Radix_search_worst(RadixObject *self, PyObject *args, PyObject *kw_args)
         if ((prefix = args_to_prefix(addr, packed, packlen, prefixlen)) == NULL)
                 return NULL;
 
-        if ((node = radix_search_worst(PICKRT(prefix, self), prefix)) == NULL || 
+        if ((node = radix_search_worst(self->rt, prefix)) == NULL || 
             node->data == NULL) {
                 Deref_Prefix(prefix);
                 Py_INCREF(Py_None);
@@ -536,7 +519,7 @@ Radix_search_covered(RadixObject *self, PyObject *args, PyObject *kw_args)
         if ((ret = PyList_New(0)) == NULL)
                 return NULL;
 
-        if ((node = radix_search_node(PICKRT(prefix, self), prefix)) == NULL) {
+        if ((node = radix_search_node(self->rt, prefix)) == NULL) {
                 Deref_Prefix(prefix);
                 return ret;
         }
@@ -584,7 +567,7 @@ Radix_search_covering(RadixObject *self, PyObject *args, PyObject *kw_args)
                 return NULL;
         }
 
-        if ((node = radix_search_best(PICKRT(prefix, self), prefix)) == NULL) {
+        if ((node = radix_search_best(self->rt, prefix)) == NULL) {
                 Deref_Prefix(prefix);
                 return ret;
         }
@@ -620,14 +603,10 @@ Radix_nodes(RadixObject *self, PyObject *args)
         if ((ret = PyList_New(0)) == NULL)
                 return NULL;
 
-        RADIX_WALK(self->rt4->head, node) {
+        RADIX_TREE_WALK(self->rt, node) {
                 if (node->data != NULL)
                         PyList_Append(ret, (PyObject *)node->data);
-        } RADIX_WALK_END;
-        RADIX_WALK(self->rt6->head, node) {
-                if (node->data != NULL)
-                        PyList_Append(ret, (PyObject *)node->data);
-        } RADIX_WALK_END;
+        } RADIX_TREE_WALK_END;
 
         return (ret);
 }
@@ -651,18 +630,12 @@ Radix_prefixes(RadixObject *self, PyObject *args)
         if ((ret = PyList_New(0)) == NULL)
                 return NULL;
 
-        RADIX_WALK(self->rt4->head, node) {
+        RADIX_TREE_WALK(self->rt, node) {
                 if (node->data != NULL) {
                         PyList_Append(ret,
                             ((RadixNodeObject *)node->data)->prefix);
                 }
-        } RADIX_WALK_END;
-        RADIX_WALK(self->rt6->head, node) {
-                if (node->data != NULL) {
-                        PyList_Append(ret,
-                            ((RadixNodeObject *)node->data)->prefix);
-                }
-        } RADIX_WALK_END;
+        } RADIX_TREE_WALK_END;
 
         return (ret);
 }
@@ -763,7 +736,7 @@ newRadixIterObject(RadixObject *parent)
         Py_XINCREF(self->parent);
 
         self->sp = self->iterstack;
-        self->rn = self->parent->rt4->head;
+        self->rn = self->parent->rt->head_ipv4;
         self->gen_id = self->parent->gen_id;
         self->af = AF_INET;
         return self;
@@ -797,7 +770,7 @@ RadixIter_iternext(RadixIterObject *self)
                         return NULL;
                 /* Otherwise reset and start walk of IPv6 tree */
                 self->sp = self->iterstack;
-                self->rn = self->parent->rt6->head;
+                self->rn = self->parent->rt->head_ipv6;
                 self->af = AF_INET6;
                 goto again;
         }

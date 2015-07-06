@@ -109,8 +109,8 @@ typedef struct _radix_node_t {
 } radix_node_t;
 
 typedef struct _radix_tree_t {
-        radix_node_t *head;
-        u_int maxbits;                  /* for IP, 32 bit addresses */
+        radix_node_t *head_ipv4;
+        radix_node_t *head_ipv6;
         int num_active_node;            /* for debug purpose */
 } radix_tree_t;
 
@@ -155,6 +155,25 @@ void radix_process(radix_tree_t *radix, rdx_cb_t func, void *cbctx);
                         } \
                 } \
         } while (0)
+
+#define RADIX_TREE_WALK(Xtree, Xnode) \
+        do { \
+                radix_node_t *Xheads[] = { \
+                        (Xtree)->head_ipv4, \
+                        (Xtree)->head_ipv6, \
+                }; \
+                radix_node_t **Xpnode = &Xnode; \
+                unsigned Xi; \
+                for (Xi = 0; Xi < sizeof(Xheads) / sizeof(Xheads[0]); Xi++) { \
+                        RADIX_WALK(Xheads[Xi], Xnode)
+
+#define RADIX_TREE_WALK_END \
+                        RADIX_WALK_END; \
+                        if (*Xpnode) \
+                                break; \
+                } \
+        } while (0)
+
 
 /* Local additions */
 

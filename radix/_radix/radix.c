@@ -93,6 +93,13 @@
              (node) = (((node)->bit == (prefix)->bitlen) ? NULL : \
                        BIT_TEST_SEARCH(prefix_touchar(prefix), node) ? (node)->r : (node)->l))
 
+#define RADIX_PHEAD_BY_PREFIX(tree, prefix) \
+        ((prefix)->family == AF_INET ? &(tree)->head_ipv4 : &(tree)->head_ipv6)
+#define RADIX_HEAD_BY_PREFIX(tree, prefix) \
+        ((prefix)->family == AF_INET ? (tree)->head_ipv4 : (tree)->head_ipv6)
+#define RADIX_MAXBITS_BY_PREFIX(prefix) \
+        ((prefix)->family == AF_INET ? 32 : 128)
+
 /*
  * Originally from MRT lib/mrt/prefix.c
  * $MRTId: prefix.c,v 1.1.1.1 2000/08/14 18:46:11 labovit Exp $
@@ -189,8 +196,8 @@ radix_tree_t
                 return (NULL);
         memset(radix, '\0', sizeof(*radix));
 
-        radix->maxbits = 128;
-        radix->head = NULL;
+        radix->head_ipv4 = NULL;
+        radix->head_ipv6 = NULL;
         radix->num_active_node = 0;
         return (radix);
 }
@@ -199,13 +206,13 @@ radix_tree_t
  * if func is supplied, it will be called as func(node->data)
  * before deleting the node
  */
-void
-Clear_Radix(radix_tree_t *radix, rdx_cb_t func, void *cbctx)
+static void
+radix_clear_head(radix_tree_t *radix, radix_node_t *head, rdx_cb_t func, void *cbctx)
 {
-        if (radix->head) {
+        if (head) {
                 radix_node_t *Xstack[RADIX_MAXBITS + 1];
                 radix_node_t **Xsp = Xstack;
-                radix_node_t *Xrn = radix->head;
+                radix_node_t *Xrn = head;
 
                 while (Xrn) {
                         radix_node_t *l = Xrn->l;
@@ -235,6 +242,13 @@ Clear_Radix(radix_tree_t *radix, rdx_cb_t func, void *cbctx)
 }
 
 void
+Clear_Radix(radix_tree_t *radix, rdx_cb_t func, void *cbctx)
+{
+        radix_clear_head(radix, radix->head_ipv4, func, cbctx);
+        radix_clear_head(radix, radix->head_ipv6, func, cbctx);
+}
+
+void
 Destroy_Radix(radix_tree_t *radix, rdx_cb_t func, void *cbctx)
 {
         Clear_Radix(radix, func, cbctx);
@@ -249,23 +263,23 @@ radix_process(radix_tree_t *radix, rdx_cb_t func, void *cbctx)
 {
         radix_node_t *node;
 
-        RADIX_WALK(radix->head, node) {
+        RADIX_TREE_WALK(radix, node) {
                 func(node, cbctx);
-        } RADIX_WALK_END;
+        } RADIX_TREE_WALK_END;
 }
 
 radix_node_t
 *radix_search_exact(radix_tree_t *radix, prefix_t *prefix)
 {
-        radix_node_t *node;
+        radix_node_t *node, *head;
         u_int bitlen;
 
-        if (radix->head == NULL)
+        if ((head = RADIX_HEAD_BY_PREFIX(radix, prefix)) == NULL)
                 return (NULL);
 
         bitlen = prefix->bitlen;
 
-        RADIX_SEARCH_FOREACH(node, radix->head, prefix);
+        RADIX_SEARCH_FOREACH(node, head, prefix);
 
         if (node == NULL || node->bit > bitlen || node->prefix == NULL)
                 return (NULL);
@@ -282,15 +296,15 @@ radix_node_t
 radix_node_t
 *radix_search_node(radix_tree_t *radix, prefix_t *prefix)
 {
-        radix_node_t *node;
+        radix_node_t *node, *head;
         u_int bitlen;
 
-        if (radix->head == NULL)
+        if ((head = RADIX_HEAD_BY_PREFIX(radix, prefix)) == NULL)
                 return (NULL);
 
         bitlen = prefix->bitlen;
 
-        RADIX_SEARCH_FOREACH(node, radix->head, prefix);
+        RADIX_SEARCH_FOREACH(node, head, prefix);
 
         if (node == NULL)
                 return (NULL);
@@ -347,17 +361,17 @@ radix_node_t
 radix_node_t
 *radix_search_best2(radix_tree_t *radix, prefix_t *prefix, int inclusive)
 {
-        radix_node_t *node;
+        radix_node_t *node, *head;
         radix_node_t *stack[RADIX_MAXBITS + 1];
         u_int bitlen;
         int cnt = 0;
 
-        if (radix->head == NULL)
+        if ((head = RADIX_HEAD_BY_PREFIX(radix, prefix)) == NULL)
                 return (NULL);
 
         bitlen = prefix->bitlen;
 
-        RADIX_SEARCH_FOREACH_INCLUSIVE(node, radix->head, prefix) {
+        RADIX_SEARCH_FOREACH_INCLUSIVE(node, head, prefix) {
                 if (node->prefix && (inclusive || node->bit != bitlen))
                     stack[cnt++] = node;
         }
@@ -386,18 +400,18 @@ radix_node_t
 radix_node_t
 *radix_search_worst2(radix_tree_t *radix, prefix_t *prefix, int inclusive)
 {
-        radix_node_t *node;
+        radix_node_t *node, *head;
         radix_node_t *stack[RADIX_MAXBITS + 1];
         u_int bitlen;
         int cnt = 0;
         int iterator;
 
-        if (radix->head == NULL)
+        if ((head = RADIX_HEAD_BY_PREFIX(radix, prefix)) == NULL)
                 return (NULL);
 
         bitlen = prefix->bitlen;
 
-        RADIX_SEARCH_FOREACH_INCLUSIVE(node, radix->head, prefix) {
+        RADIX_SEARCH_FOREACH_INCLUSIVE(node, head, prefix) {
                 if (node->prefix && (inclusive || node->bit != bitlen))
                     stack[cnt++] = node;
         }
@@ -425,12 +439,14 @@ radix_node_t
 radix_node_t
 *radix_lookup(radix_tree_t *radix, prefix_t *prefix)
 {
-        radix_node_t *node, *new_node, *parent, *glue;
+        radix_node_t **phead, *node, *new_node, *parent, *glue;
         u_char *addr, *test_addr;
-        u_int bitlen, check_bit, differ_bit;
+        u_int bitlen, check_bit, differ_bit, maxbits;
         u_int i, j, r;
 
-        if (radix->head == NULL) {
+        maxbits = RADIX_MAXBITS_BY_PREFIX(prefix);
+        phead = RADIX_PHEAD_BY_PREFIX(radix, prefix);
+        if (*phead == NULL) {
                 if ((node = PyMem_Malloc(sizeof(*node))) == NULL)
                         return (NULL);
                 memset(node, '\0', sizeof(*node));
@@ -439,16 +455,16 @@ radix_node_t
                 node->parent = NULL;
                 node->l = node->r = NULL;
                 node->data = NULL;
-                radix->head = node;
+                *phead = node;
                 radix->num_active_node++;
                 return (node);
         }
         addr = prefix_touchar(prefix);
         bitlen = prefix->bitlen;
-        node = radix->head;
+        node = *phead;
 
         while (node->bit < bitlen || node->prefix == NULL) {
-                if (node->bit < radix->maxbits && BIT_TEST_SEARCH(addr, node)) {
+                if (node->bit < maxbits && BIT_TEST_SEARCH(addr, node)) {
                         if (node->r == NULL)
                                 break;
                         node = node->r;
@@ -503,7 +519,7 @@ radix_node_t
 
         if (node->bit == differ_bit) {
                 new_node->parent = node;
-                if (node->bit < radix->maxbits && BIT_TEST_SEARCH(addr, node))
+                if (node->bit < maxbits && BIT_TEST_SEARCH(addr, node))
                         node->r = new_node;
                 else
                         node->l = new_node;
@@ -511,7 +527,7 @@ radix_node_t
                 return (new_node);
         }
         if (bitlen == differ_bit) {
-                if (bitlen < radix->maxbits &&
+                if (bitlen < maxbits &&
                     BIT_TEST_SEARCH_BIT(test_addr, bitlen))
                         new_node->r = node;
                 else
@@ -519,7 +535,7 @@ radix_node_t
 
                 new_node->parent = node->parent;
                 if (node->parent == NULL)
-                        radix->head = new_node;
+                        *phead = new_node;
                 else if (node->parent->r == node)
                         node->parent->r = new_node;
                 else
@@ -535,7 +551,7 @@ radix_node_t
                 glue->parent = node->parent;
                 glue->data = NULL;
                 radix->num_active_node++;
-                if (differ_bit < radix->maxbits &&
+                if (differ_bit < maxbits &&
                     BIT_TEST_SEARCH_BIT(addr, differ_bit)) {
                         glue->r = new_node;
                         glue->l = node;
@@ -546,7 +562,7 @@ radix_node_t
                 new_node->parent = glue;
 
                 if (node->parent == NULL)
-                        radix->head = glue;
+                        *phead = glue;
                 else if (node->parent->r == node)
                         node->parent->r = glue;
                 else
@@ -561,7 +577,9 @@ radix_node_t
 void
 radix_remove(radix_tree_t *radix, radix_node_t *node)
 {
-        radix_node_t *parent, *child;
+        radix_node_t **phead, *parent, *child;
+
+        phead = RADIX_PHEAD_BY_PREFIX(radix, node->prefix);
 
         if (node->r && node->l) {
                 /*
@@ -582,7 +600,7 @@ radix_remove(radix_tree_t *radix, radix_node_t *node)
                 radix->num_active_node--;
 
                 if (parent == NULL) {
-                        radix->head = NULL;
+                        *phead = NULL;
                         return;
                 }
                 if (parent->r == node) {
@@ -598,7 +616,7 @@ radix_remove(radix_tree_t *radix, radix_node_t *node)
 
                 /* we need to remove parent too */
                 if (parent->parent == NULL)
-                        radix->head = child;
+                        *phead = child;
                 else if (parent->parent->r == parent)
                         parent->parent->r = child;
                 else
@@ -622,7 +640,7 @@ radix_remove(radix_tree_t *radix, radix_node_t *node)
         radix->num_active_node--;
 
         if (parent == NULL) {
-                radix->head = child;
+                *phead = child;
                 return;
         }
         if (parent->r == node)
