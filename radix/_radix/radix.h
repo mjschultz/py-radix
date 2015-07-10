@@ -109,22 +109,29 @@ typedef struct _radix_node_t {
 } radix_node_t;
 
 typedef struct _radix_tree_t {
-        radix_node_t *head;
-        u_int maxbits;                  /* for IP, 32 bit addresses */
+        radix_node_t *head_ipv4;
+        radix_node_t *head_ipv6;
         int num_active_node;            /* for debug purpose */
 } radix_tree_t;
 
 /* Type of callback function */
 typedef void (*rdx_cb_t)(radix_node_t *, void *);
+typedef int (*rdx_search_cb_t)(radix_node_t *, void *);
 
 radix_tree_t *New_Radix(void);
 void Destroy_Radix(radix_tree_t *radix, rdx_cb_t func, void *cbctx);
+void Clear_Radix(radix_tree_t *radix, rdx_cb_t func, void *cbctx);
 radix_node_t *radix_lookup(radix_tree_t *radix, prefix_t *prefix);
 void radix_remove(radix_tree_t *radix, radix_node_t *node);
 radix_node_t *radix_search_node(radix_tree_t *radix, prefix_t *prefix);
 radix_node_t *radix_search_exact(radix_tree_t *radix, prefix_t *prefix);
 radix_node_t *radix_search_best(radix_tree_t *radix, prefix_t *prefix);
+radix_node_t *radix_search_best2(radix_tree_t *radix, prefix_t *prefix, int inclusive);
 radix_node_t *radix_search_worst(radix_tree_t *radix, prefix_t *prefix);
+radix_node_t *radix_search_worst2(radix_tree_t *radix, prefix_t *prefix, int inclusive);
+int radix_search_covering(radix_tree_t *radix, prefix_t *prefix, rdx_search_cb_t func, void *cbctx);
+int radix_search_covered(radix_tree_t *radix, prefix_t *prefix, rdx_search_cb_t func, void *cbctx, int inclusive);
+int radix_search_intersect(radix_tree_t *radix, prefix_t *prefix, rdx_search_cb_t func, void *cbctx);
 void radix_process(radix_tree_t *radix, rdx_cb_t func, void *cbctx);
 
 #define RADIX_MAXBITS 128
@@ -153,10 +160,31 @@ void radix_process(radix_tree_t *radix, rdx_cb_t func, void *cbctx);
                 } \
         } while (0)
 
+#define RADIX_TREE_WALK(Xtree, Xnode) \
+        do { \
+                radix_node_t *Xheads[] = { \
+                        (Xtree)->head_ipv4, \
+                        (Xtree)->head_ipv6, \
+                }; \
+                radix_node_t **Xpnode = &Xnode; \
+                unsigned Xi; \
+                for (Xi = 0; Xi < sizeof(Xheads) / sizeof(Xheads[0]); Xi++) { \
+                        RADIX_WALK(Xheads[Xi], Xnode)
+
+#define RADIX_TREE_WALK_END \
+                        RADIX_WALK_END; \
+                        if (*Xpnode) \
+                                break; \
+                } \
+        } while (0)
+
+
 /* Local additions */
 
 prefix_t *prefix_pton(const char *string, long len, const char **errmsg);
 prefix_t *prefix_from_blob(u_char *blob, int len, int prefixlen);
+prefix_t *prefix_pton_ex(prefix_t *prefix, const char *string, long len, const char **errmsg);
+prefix_t *prefix_from_blob_ex(prefix_t *prefix, u_char *blob, int len, int prefixlen);
 const char *prefix_addr_ntop(prefix_t *prefix, char *buf, size_t len);
 const char *prefix_ntop(prefix_t *prefix, char *buf, size_t len);
 

@@ -71,6 +71,9 @@
  * $MRTId: defs.h,v 1.1.1.1 2000/08/14 18:46:10 labovit Exp $
  */
 #define BIT_TEST(f, b)  ((f) & (b))
+#define BIT_TEST_SEARCH_BIT(addr, bit) \
+        BIT_TEST((addr)[(bit) >> 3], 0x80 >> ((bit) & 0x07))
+#define BIT_TEST_SEARCH(addr, node) BIT_TEST_SEARCH_BIT(addr, (node)->bit)
 
 /*
  * Originally from MRT include/mrt.h
@@ -78,6 +81,25 @@
  */
 #define prefix_tochar(prefix)           ((char *)&(prefix)->add)
 #define prefix_touchar(prefix)          ((u_char *)&(prefix)->add)
+
+#define RADIX_SEARCH_FOREACH(node, head, prefix) \
+        for ((node) = (head); \
+             (node) != NULL && (node)->bit < (prefix)->bitlen; \
+             (node) = BIT_TEST_SEARCH(prefix_touchar(prefix), node) ? (node)->r : (node)->l)
+
+#define RADIX_SEARCH_FOREACH_INCLUSIVE(node, head, prefix) \
+        for ((node) = (head); \
+             (node) != NULL && (node)->bit <= (prefix)->bitlen; \
+             (node) = BIT_TEST_SEARCH(prefix_touchar(prefix), node) ? (node)->r : (node)->l)
+
+#define RADIX_PHEAD_BY_PREFIX(tree, prefix) \
+        ((prefix)->family == AF_INET ? &(tree)->head_ipv4 : &(tree)->head_ipv6)
+#define RADIX_HEAD_BY_PREFIX(tree, prefix) \
+        ((prefix)->family == AF_INET ? (tree)->head_ipv4 : (tree)->head_ipv6)
+#define RADIX_MAXBITS_BY_PREFIX(prefix) \
+        ((prefix)->family == AF_INET ? 32 : 128)
+
+#define RADIX_MIN(a, b) ((a) < (b) ? (a) : (b))
 
 /*
  * Originally from MRT lib/mrt/prefix.c
@@ -175,8 +197,8 @@ radix_tree_t
                 return (NULL);
         memset(radix, '\0', sizeof(*radix));
 
-        radix->maxbits = 128;
-        radix->head = NULL;
+        radix->head_ipv4 = NULL;
+        radix->head_ipv6 = NULL;
         radix->num_active_node = 0;
         return (radix);
 }
@@ -186,12 +208,12 @@ radix_tree_t
  * before deleting the node
  */
 static void
-Clear_Radix(radix_tree_t *radix, rdx_cb_t func, void *cbctx)
+radix_clear_head(radix_tree_t *radix, radix_node_t *head, rdx_cb_t func, void *cbctx)
 {
-        if (radix->head) {
+        if (head) {
                 radix_node_t *Xstack[RADIX_MAXBITS + 1];
                 radix_node_t **Xsp = Xstack;
-                radix_node_t *Xrn = radix->head;
+                radix_node_t *Xrn = head;
 
                 while (Xrn) {
                         radix_node_t *l = Xrn->l;
@@ -221,6 +243,13 @@ Clear_Radix(radix_tree_t *radix, rdx_cb_t func, void *cbctx)
 }
 
 void
+Clear_Radix(radix_tree_t *radix, rdx_cb_t func, void *cbctx)
+{
+        radix_clear_head(radix, radix->head_ipv4, func, cbctx);
+        radix_clear_head(radix, radix->head_ipv6, func, cbctx);
+}
+
+void
 Destroy_Radix(radix_tree_t *radix, rdx_cb_t func, void *cbctx)
 {
         Clear_Radix(radix, func, cbctx);
@@ -235,40 +264,29 @@ radix_process(radix_tree_t *radix, rdx_cb_t func, void *cbctx)
 {
         radix_node_t *node;
 
-        RADIX_WALK(radix->head, node) {
+        RADIX_TREE_WALK(radix, node) {
                 func(node, cbctx);
-        } RADIX_WALK_END;
+        } RADIX_TREE_WALK_END;
 }
 
 radix_node_t
 *radix_search_exact(radix_tree_t *radix, prefix_t *prefix)
 {
-        radix_node_t *node;
-        u_char *addr;
+        radix_node_t *node, *head;
         u_int bitlen;
 
-        if (radix->head == NULL)
+        if ((head = RADIX_HEAD_BY_PREFIX(radix, prefix)) == NULL)
                 return (NULL);
 
-        node = radix->head;
-        addr = prefix_touchar(prefix);
         bitlen = prefix->bitlen;
 
-        while (node->bit < bitlen) {
-                if (BIT_TEST(addr[node->bit >> 3], 0x80 >> (node->bit & 0x07)))
-                        node = node->r;
-                else
-                        node = node->l;
+        RADIX_SEARCH_FOREACH(node, head, prefix);
 
-                if (node == NULL)
-                        return (NULL);
-        }
-
-        if (node->bit > bitlen || node->prefix == NULL)
+        if (node == NULL || node->bit > bitlen || node->prefix == NULL)
                 return (NULL);
 
-        if (comp_with_mask(prefix_tochar(node->prefix),
-            prefix_tochar(prefix), bitlen))
+        if (comp_with_mask(prefix_touchar(node->prefix),
+            prefix_touchar(prefix), bitlen))
                 return (node);
 
         return (NULL);
@@ -279,30 +297,22 @@ radix_node_t
 radix_node_t
 *radix_search_node(radix_tree_t *radix, prefix_t *prefix)
 {
-        radix_node_t *node;
-        u_char *addr;
+        radix_node_t *node, *head;
         u_int bitlen;
 
-        if (radix->head == NULL)
+        if ((head = RADIX_HEAD_BY_PREFIX(radix, prefix)) == NULL)
                 return (NULL);
 
-        node = radix->head;
-        addr = prefix_touchar(prefix);
         bitlen = prefix->bitlen;
 
-        while (node->bit < bitlen) {
-                if (BIT_TEST(addr[node->bit >> 3], 0x80 >> (node->bit & 0x07)))
-                        node = node->r;
-                else
-                        node = node->l;
+        RADIX_SEARCH_FOREACH(node, head, prefix);
 
-                if (node == NULL)
-                        return (NULL);
-        }
+        if (node == NULL)
+                return (NULL);
 
         // if the node has a prefix we can (and must to avoid false negatives) check directly
         if (node->prefix) {
-                if (comp_with_mask(prefix_tochar(node->prefix), prefix_tochar(prefix), bitlen))
+                if (comp_with_mask(prefix_touchar(node->prefix), prefix_touchar(prefix), bitlen))
                         return (node);
                 else
                         return (NULL);
@@ -318,7 +328,7 @@ radix_node_t
 
         RADIX_WALK(node->r, node_iter) {
             if (node_iter->data != NULL) {
-                if ( ! comp_with_mask(prefix_tochar(node_iter->prefix), prefix_tochar(prefix), bitlen)) {
+                if ( ! comp_with_mask(prefix_touchar(node_iter->prefix), prefix_touchar(prefix), bitlen)) {
                     right_mismatch = 1;
                     break;
                 }
@@ -327,7 +337,7 @@ radix_node_t
 
         RADIX_WALK(node->l, node_iter) {
             if (node_iter->data != NULL) {
-                if ( ! comp_with_mask(prefix_tochar(node_iter->prefix), prefix_tochar(prefix), bitlen)) {
+                if ( ! comp_with_mask(prefix_touchar(node_iter->prefix), prefix_touchar(prefix), bitlen)) {
                     left_mismatch = 1;
                     break;
                 }
@@ -349,45 +359,31 @@ radix_node_t
 
 
 /* if inclusive != 0, "best" may be the given prefix itself */
-static radix_node_t
+radix_node_t
 *radix_search_best2(radix_tree_t *radix, prefix_t *prefix, int inclusive)
 {
-        radix_node_t *node;
+        radix_node_t *node, *head;
         radix_node_t *stack[RADIX_MAXBITS + 1];
-        u_char *addr;
         u_int bitlen;
         int cnt = 0;
 
-        if (radix->head == NULL)
+        if ((head = RADIX_HEAD_BY_PREFIX(radix, prefix)) == NULL)
                 return (NULL);
 
-        node = radix->head;
-        addr = prefix_touchar(prefix);
         bitlen = prefix->bitlen;
 
-        while (node->bit < bitlen) {
-                if (node->prefix)
-                        stack[cnt++] = node;
-                if (BIT_TEST(addr[node->bit >> 3], 0x80 >> (node->bit & 0x07)))
-                        node = node->r;
-                else
-                        node = node->l;
-
-                if (node == NULL)
-                        break;
+        RADIX_SEARCH_FOREACH_INCLUSIVE(node, head, prefix) {
+                if (node->prefix && (inclusive || node->bit != bitlen))
+                    stack[cnt++] = node;
         }
-
-        if (inclusive && node && node->prefix)
-                stack[cnt++] = node;
-
 
         if (cnt <= 0)
                 return (NULL);
 
         while (--cnt >= 0) {
                 node = stack[cnt];
-                if (comp_with_mask(prefix_tochar(node->prefix),
-                    prefix_tochar(prefix), node->prefix->bitlen) &&
+                if (comp_with_mask(prefix_touchar(node->prefix),
+                    prefix_touchar(prefix), node->prefix->bitlen) &&
                     node->prefix->bitlen <= bitlen)
                         return (node);
         }
@@ -402,46 +398,32 @@ radix_node_t
 }
 
 /* if inclusive != 0, "worst" may be the given prefix itself */
-static radix_node_t
+radix_node_t
 *radix_search_worst2(radix_tree_t *radix, prefix_t *prefix, int inclusive)
 {
-        radix_node_t *node;
+        radix_node_t *node, *head;
         radix_node_t *stack[RADIX_MAXBITS + 1];
-        u_char *addr;
         u_int bitlen;
         int cnt = 0;
-        int iterator = 0;
+        int iterator;
 
-        if (radix->head == NULL)
+        if ((head = RADIX_HEAD_BY_PREFIX(radix, prefix)) == NULL)
                 return (NULL);
 
-        node = radix->head;
-        addr = prefix_touchar(prefix);
         bitlen = prefix->bitlen;
 
-        while (node->bit < bitlen) {
-                if (node->prefix)
-                        stack[cnt++] = node;
-                if (BIT_TEST(addr[node->bit >> 3], 0x80 >> (node->bit & 0x07)))
-                        node = node->r;
-                else
-                        node = node->l;
-
-                if (node == NULL)
-                        break;
+        RADIX_SEARCH_FOREACH_INCLUSIVE(node, head, prefix) {
+                if (node->prefix && (inclusive || node->bit != bitlen))
+                    stack[cnt++] = node;
         }
-
-        if (inclusive && node && node->prefix)
-                stack[cnt++] = node;
-
 
         if (cnt <= 0)
                 return (NULL);
         
-        for (iterator; iterator < cnt; ++iterator) {
+        for (iterator = 0; iterator < cnt; ++iterator) {
                 node = stack[iterator];
-                if (comp_with_mask(prefix_tochar(node->prefix),
-                    prefix_tochar(prefix), node->prefix->bitlen)) 
+                if (comp_with_mask(prefix_touchar(node->prefix),
+                    prefix_touchar(prefix), node->prefix->bitlen)) 
                         return (node);
         }
         return (NULL);
@@ -455,15 +437,140 @@ radix_node_t
 }
 
 
+int
+radix_search_covering(radix_tree_t *radix, prefix_t *prefix, rdx_search_cb_t func, void *cbctx)
+{
+        radix_node_t *node;
+        int rc = 0;
+
+        node = radix_search_best(radix, prefix);
+        if (node == NULL)
+                return (0);
+
+        do {
+                if (!node->prefix)
+                        continue;
+                if ((rc = func(node, cbctx)) != 0)
+                        break;
+        } while ((node = node->parent) != NULL);
+
+        return (rc);
+}
+
+int
+radix_search_covered(radix_tree_t *radix, prefix_t *prefix, rdx_search_cb_t func, void *cbctx, int inclusive)
+{
+        radix_node_t *node, *prefixed_node, *prev_node;
+        struct {
+                radix_node_t *node;
+                enum {
+                        RADIX_STATE_LEFT = 0,
+                        RADIX_STATE_RIGHT,
+                        RADIX_STATE_SELF,
+                } state;
+                int checked;
+        } stack[RADIX_MAXBITS + 1], *pst;
+        int stackpos;
+        int rc;
+
+#define COMP_NODE_PREFIX(node, prefix_) \
+        comp_with_mask(prefix_touchar((node)->prefix), \
+                       prefix_touchar(prefix_), \
+                       RADIX_MIN((node)->prefix->bitlen, (prefix_)->bitlen))
+
+        prev_node = NULL;
+        prefixed_node = NULL;
+        RADIX_SEARCH_FOREACH_INCLUSIVE(
+                node, RADIX_HEAD_BY_PREFIX(radix, prefix), prefix) {
+
+                prev_node = node;
+                if (node->bit == prefix->bitlen)
+                        break;
+                if (node->prefix != NULL)
+                        prefixed_node = node;
+        }
+
+        if (node == NULL) {
+                if (prev_node == NULL)
+                        return (0);
+                node = prev_node;
+        } else  {
+                /* node->bit >= prefix->bitlen */
+
+                if (node->prefix != NULL)
+                        prefixed_node = node;
+        }
+        if (prefixed_node != NULL && !COMP_NODE_PREFIX(prefixed_node, prefix))
+                return (0);
+
+        stack[0].state = RADIX_STATE_LEFT;
+        stack[0].node = node;
+        stack[0].checked = (node == prefixed_node);
+        stackpos = 0;
+
+        while (stackpos >= 0) {
+                pst = stack + stackpos;
+
+                switch (pst->state) {
+                case RADIX_STATE_LEFT:
+                case RADIX_STATE_RIGHT:
+                        if (pst->state == RADIX_STATE_LEFT) {
+                                pst->state = RADIX_STATE_RIGHT;
+                                node = pst->node->l;
+                        } else {
+                                pst->state = RADIX_STATE_SELF;
+                                node = pst->node->r;
+                        }
+                        if (node == NULL)
+                                continue;
+
+                        /* skip foreign nodes */
+                        if (!pst->checked && node->prefix != NULL &&
+                            !COMP_NODE_PREFIX(node, prefix))
+                                continue;
+                        stackpos++;
+                        pst = stack + stackpos;
+                        pst->state = RADIX_STATE_LEFT;
+                        pst->node = node;
+                        pst->checked = (pst[-1].checked || node->prefix != NULL);
+                        break;
+                case RADIX_STATE_SELF:
+                        if (inclusive || stackpos > 0 || pst->node->bit > prefix->bitlen) {
+                                if (pst->node->prefix != NULL &&
+                                    (rc = func(pst->node, cbctx)) != 0)
+                                        return (rc);
+                        }
+
+                        stackpos--;
+                        break;
+                }
+        }
+#undef COMP_NODE_PREFIX
+        return (0);
+}
+
+int
+radix_search_intersect(radix_tree_t *radix, prefix_t *prefix, rdx_search_cb_t func, void *cbctx)
+{
+        int rc;
+
+        if ((rc = radix_search_covering(radix, prefix, func, cbctx)) == 0)
+                rc = radix_search_covered(radix, prefix, func, cbctx, 0);
+
+        return (rc);
+}
+
 radix_node_t
 *radix_lookup(radix_tree_t *radix, prefix_t *prefix)
 {
-        radix_node_t *node, *new_node, *parent, *glue;
+        radix_node_t **phead, *node, *new_node, *parent, *glue;
         u_char *addr, *test_addr;
-        u_int bitlen, check_bit, differ_bit;
+        u_int bitlen, check_bit, differ_bit, maxbits;
         u_int i, j, r;
 
-        if (radix->head == NULL) {
+        maxbits = RADIX_MAXBITS_BY_PREFIX(prefix);
+        phead = RADIX_PHEAD_BY_PREFIX(radix, prefix);
+        if (*phead == NULL) {
                 if ((node = PyMem_Malloc(sizeof(*node))) == NULL)
                         return (NULL);
                 memset(node, '\0', sizeof(*node));
@@ -472,17 +579,16 @@ radix_node_t
                 node->parent = NULL;
                 node->l = node->r = NULL;
                 node->data = NULL;
-                radix->head = node;
+                *phead = node;
                 radix->num_active_node++;
                 return (node);
         }
         addr = prefix_touchar(prefix);
         bitlen = prefix->bitlen;
-        node = radix->head;
+        node = *phead;
 
         while (node->bit < bitlen || node->prefix == NULL) {
-                if (node->bit < radix->maxbits && BIT_TEST(addr[node->bit >> 3],
-                    0x80 >> (node->bit & 0x07))) {
+                if (node->bit < maxbits && BIT_TEST_SEARCH(addr, node)) {
                         if (node->r == NULL)
                                 break;
                         node = node->r;
@@ -537,8 +643,7 @@ radix_node_t
 
         if (node->bit == differ_bit) {
                 new_node->parent = node;
-                if (node->bit < radix->maxbits && BIT_TEST(addr[node->bit >> 3],
-                    0x80 >> (node->bit & 0x07)))
+                if (node->bit < maxbits && BIT_TEST_SEARCH(addr, node))
                         node->r = new_node;
                 else
                         node->l = new_node;
@@ -546,15 +651,15 @@ radix_node_t
                 return (new_node);
         }
         if (bitlen == differ_bit) {
-                if (bitlen < radix->maxbits && BIT_TEST(test_addr[bitlen >> 3],
-                    0x80 >> (bitlen & 0x07)))
+                if (bitlen < maxbits &&
+                    BIT_TEST_SEARCH_BIT(test_addr, bitlen))
                         new_node->r = node;
                 else
                         new_node->l = node;
 
                 new_node->parent = node->parent;
                 if (node->parent == NULL)
-                        radix->head = new_node;
+                        *phead = new_node;
                 else if (node->parent->r == node)
                         node->parent->r = new_node;
                 else
@@ -570,9 +675,8 @@ radix_node_t
                 glue->parent = node->parent;
                 glue->data = NULL;
                 radix->num_active_node++;
-                if (differ_bit < radix->maxbits &&
-                    BIT_TEST(addr[differ_bit >> 3],
-                    0x80 >> (differ_bit & 0x07))) {
+                if (differ_bit < maxbits &&
+                    BIT_TEST_SEARCH_BIT(addr, differ_bit)) {
                         glue->r = new_node;
                         glue->l = node;
                 } else {
@@ -582,7 +686,7 @@ radix_node_t
                 new_node->parent = glue;
 
                 if (node->parent == NULL)
-                        radix->head = glue;
+                        *phead = glue;
                 else if (node->parent->r == node)
                         node->parent->r = glue;
                 else
@@ -597,7 +701,9 @@ radix_node_t
 void
 radix_remove(radix_tree_t *radix, radix_node_t *node)
 {
-        radix_node_t *parent, *child;
+        radix_node_t **phead, *parent, *child;
+
+        phead = RADIX_PHEAD_BY_PREFIX(radix, node->prefix);
 
         if (node->r && node->l) {
                 /*
@@ -618,7 +724,7 @@ radix_remove(radix_tree_t *radix, radix_node_t *node)
                 radix->num_active_node--;
 
                 if (parent == NULL) {
-                        radix->head = NULL;
+                        *phead = NULL;
                         return;
                 }
                 if (parent->r == node) {
@@ -634,7 +740,7 @@ radix_remove(radix_tree_t *radix, radix_node_t *node)
 
                 /* we need to remove parent too */
                 if (parent->parent == NULL)
-                        radix->head = child;
+                        *phead = child;
                 else if (parent->parent->r == parent)
                         parent->parent->r = child;
                 else
@@ -658,7 +764,7 @@ radix_remove(radix_tree_t *radix, radix_node_t *node)
         radix->num_active_node--;
 
         if (parent == NULL) {
-                radix->head = child;
+                *phead = child;
                 return;
         }
         if (parent->r == node)
@@ -683,16 +789,13 @@ sanitise_mask(u_char *addr, u_int masklen, u_int maskbits)
 }
 
 prefix_t
-*prefix_pton(const char *string, long len, const char **errmsg)
+*prefix_pton_ex(prefix_t *ret, const char *string, long len, const char **errmsg)
 {
         char save[256], *cp, *ep;
         struct addrinfo hints, *ai;
         void *addr;
-        prefix_t *ret;
         size_t slen;
         int r;
-
-        ret = NULL;
 
         /* Copy the string to parse, because we modify it */
         if ((slen = strlen(string) + 1) > sizeof(save)) {
@@ -750,7 +853,7 @@ prefix_t
                 goto out;
         }
 
-        ret = New_Prefix2(ai->ai_addr->sa_family, addr, len, NULL);
+        ret = New_Prefix2(ai->ai_addr->sa_family, addr, len, ret);
         if (ret == NULL)
                 *errmsg = "New_Prefix2 failed";
 out:
@@ -759,7 +862,13 @@ out:
 }
 
 prefix_t
-*prefix_from_blob(u_char *blob, int len, int prefixlen)
+*prefix_pton(const char *string, long len, const char **errmsg)
+{
+	return (prefix_pton_ex(NULL, string, len, errmsg));
+}
+
+prefix_t
+*prefix_from_blob_ex(prefix_t *ret, u_char *blob, int len, int prefixlen)
 {
         int family, maxprefix;
 
@@ -782,7 +891,13 @@ prefix_t
                 prefixlen = maxprefix;
         if (prefixlen < 0 || prefixlen > maxprefix)
                 return NULL;
-        return (New_Prefix2(family, blob, prefixlen, NULL));
+        return (New_Prefix2(family, blob, prefixlen, ret));
+}
+
+prefix_t
+*prefix_from_blob(u_char *blob, int len, int prefixlen)
+{
+	return (prefix_from_blob_ex(NULL, blob, len, prefixlen));
 }
 
 const char *
