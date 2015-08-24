@@ -220,7 +220,7 @@ class RadixTree(object):
             else:
                 parent.left = None
                 child = parent.right
-            if parent._prefix:
+            if parent._prefix.addr:
                 return
             # remove the parent too
             if parent.parent is None:

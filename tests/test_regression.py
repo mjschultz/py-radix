@@ -474,7 +474,17 @@ class TestRadix(unittest.TestCase):
         self.assertEquals([n.prefix for n in
                            tree.search_covering('205.0.1.0/24')],
                           [])
+        
+    def test_30_remove(self):
+        # https://github.com/mjschultz/py-radix/issues/17
+        tree = radix.Radix()
+        tree.add('109.161.64.0/20')
+        tree.add('5.150.145.0/24')
+        tree.delete('5.150.145.0/24')
+        tree.add('5.150.145.0/24')
 
+        expected = ['5.150.145.0/24', '109.161.64.0/20']
+        self.assertEqual(expected, [n.prefix for n in tree])
 
 def main():
     unittest.main()
