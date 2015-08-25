@@ -485,6 +485,17 @@ class TestRadix(unittest.TestCase):
 
         expected = ['5.150.145.0/24', '109.161.64.0/20']
         self.assertEqual(expected, [n.prefix for n in tree])
+		
+	def test_31_covering_with_delete_error(self):
+        tree = radix.Radix()
+        tree.add('91.187.124.0/24')
+        tree.add('91.187.125.0/24')
+        tree.add('91.187.124.0/23')
+        tree.delete('91.187.124.0/23')
+        tree.add('91.187.124.0/23')
+
+        expected = ['91.187.124.0/24', '91.187.125.0/24']
+        self.assertEqual(expected, [n.prefix for n in tree])
 
     def test_31_parent(self):
         tree = radix.Radix()
