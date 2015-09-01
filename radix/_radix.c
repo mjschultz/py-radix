@@ -114,6 +114,57 @@ RadixNode_dealloc(RadixNodeObject *self)
         PyObject_Del(self);
 }
 
+static PyObject *
+Radix_parent(RadixNodeObject *self, void *closure)
+{
+PyObject *ret;
+        radix_node_t *node;
+
+        if (self->rn->parent != NULL)
+        {
+                ret = self->rn->parent->data;
+                Py_XINCREF(ret);
+        }
+        else
+                ret = Py_None;
+
+        return ret;
+}
+
+static PyObject *
+Radix_left(RadixNodeObject *self, void *closure)
+{
+        radix_node_t *node;
+        PyObject *ret;
+
+        if (self->rn->l != NULL)
+        {
+                ret = self->rn->l->data;
+                Py_XINCREF(ret);
+        }
+        else
+                ret = Py_None;
+
+        return ret;
+}
+
+static PyObject *
+Radix_right(RadixNodeObject *self, void *closure)
+{
+        radix_node_t *node;
+        PyObject *ret;
+
+        if (self->rn->r != NULL)
+        {
+                ret = self->rn->r->data;
+                Py_XINCREF(ret);
+        }
+        else
+                ret = Py_None;
+
+        return ret;
+}
+
 static PyMemberDef RadixNode_members[] = {
         {"data",        T_OBJECT, offsetof(RadixNodeObject, user_attr), READONLY},
         {"network",     T_OBJECT, offsetof(RadixNodeObject, network),   READONLY},
@@ -122,6 +173,28 @@ static PyMemberDef RadixNode_members[] = {
         {"family",      T_OBJECT, offsetof(RadixNodeObject, family),    READONLY},
         {"packed",      T_OBJECT, offsetof(RadixNodeObject, packed),    READONLY},
         {NULL}
+};
+
+static PyGetSetDef node_getter[] = {
+        {"parent",
+         (getter) Radix_parent,      /* C function to get the attribute */
+         NULL,                       /* C function to set the attribute */
+         "parent of node",           /* optional doc string */
+         NULL                        /* optional additional data for getter and setter */
+        },
+        {"left",
+         (getter) Radix_left,
+         NULL,
+         "left children of node",
+         NULL
+        },
+        {"right",
+         (getter) Radix_right,
+         NULL,
+         "right children of node",
+         NULL
+        },
+        {NULL}  /* Sentinel */
 };
 
 PyDoc_STRVAR(RadixNode_doc, 
@@ -160,7 +233,7 @@ static PyTypeObject RadixNode_Type = {
         0,                      /*tp_iternext*/
         0,                      /*tp_methods*/
         RadixNode_members,      /*tp_members*/
-        0,                      /*tp_getset*/
+        node_getter,            /*tp_getset*/
         0,                      /*tp_base*/
         0,                      /*tp_dict*/
         0,                      /*tp_descr_get*/
@@ -928,6 +1001,14 @@ PyDoc_STRVAR(module_doc,
 "       # is permitted.\n"
 "       for rnode in rtree:\n"
 "               print rnode.prefix\n"
+"       # Also you can manually walk through tree by using rnode.parent(),\n"
+"       # rnode.left() and rnode.right().\n"
+"       parents = list()\n"
+"       tmp_node = rnode\n"
+"       while tmp_node:\n"
+"               tmp_node = tmp_node.parent\n"
+"               if tmp_node:\n"
+"                      parents.append(tmp_node)\n"
 );
 
 #if PY_MAJOR_VERSION >= 3
