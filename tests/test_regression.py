@@ -486,6 +486,15 @@ class TestRadix(unittest.TestCase):
         expected = ['5.150.145.0/24', '109.161.64.0/20']
         self.assertEqual(expected, [n.prefix for n in tree])
 
+    def test_31_parent(self):
+        tree = radix.Radix()
+        root = tree.add('0.0.0.0/0')
+        self.assertEqual(root.parent, None)
+        parent_node = tree.add('10.0.0.0/23')
+        node1 = tree.add('10.0.0.0/24')
+        self.assertEqual(node1.parent, parent_node)
+
+
 def main():
     unittest.main()
 

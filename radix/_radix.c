@@ -114,6 +114,31 @@ RadixNode_dealloc(RadixNodeObject *self)
         PyObject_Del(self);
 }
 
+static PyObject *
+Radix_parent(RadixNodeObject *self, void *closure)
+{
+PyObject *ret;
+        radix_node_t *node;
+        node = self->rn;
+        ret = Py_None;
+        /* walk up through parent to find parent node with data */
+        for ( ; ; )
+        {
+                if (node && node->parent)
+                {
+                        node = node->parent;
+                        if (node->data)
+                        {
+                                ret = node->data;
+                                Py_XINCREF(ret);
+                                break;
+                        }
+                }
+                else
+                        break;
+        }
+        return ret;
+}
 static PyMemberDef RadixNode_members[] = {
         {"data",        T_OBJECT, offsetof(RadixNodeObject, user_attr), READONLY},
         {"network",     T_OBJECT, offsetof(RadixNodeObject, network),   READONLY},
@@ -122,6 +147,16 @@ static PyMemberDef RadixNode_members[] = {
         {"family",      T_OBJECT, offsetof(RadixNodeObject, family),    READONLY},
         {"packed",      T_OBJECT, offsetof(RadixNodeObject, packed),    READONLY},
         {NULL}
+};
+
+static PyGetSetDef node_getter[] = {
+        {"parent",
+         (getter) Radix_parent,      /* C function to get the attribute */
+         NULL,                       /* C function to set the attribute */
+         "parent of node",           /* optional doc string */
+         NULL                        /* optional additional data for getter and setter */
+        },
+        {NULL}  /* Sentinel */
 };
 
 PyDoc_STRVAR(RadixNode_doc, 
@@ -160,7 +195,7 @@ static PyTypeObject RadixNode_Type = {
         0,                      /*tp_iternext*/
         0,                      /*tp_methods*/
         RadixNode_members,      /*tp_members*/
-        0,                      /*tp_getset*/
+        node_getter,            /*tp_getset*/
         0,                      /*tp_base*/
         0,                      /*tp_dict*/
         0,                      /*tp_descr_get*/
@@ -906,6 +941,7 @@ PyDoc_STRVAR(module_doc,
 "       print rnode.prefixlen   # -> 8\n"
 "       print rnode.family      # -> socket.AF_INET\n"
 "       print rnode.packed      # -> '\\n\\x00\\x00\\x00'\n"
+"       print rnode.parent      # -> None\n"
 "\n"
 "       # IPv6 prefixes are fully supported in the same tree\n"
 "       rnode = rtree.add(\"2001:DB8::/32\")\n"
