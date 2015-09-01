@@ -486,6 +486,22 @@ class TestRadix(unittest.TestCase):
         expected = ['5.150.145.0/24', '109.161.64.0/20']
         self.assertEqual(expected, [n.prefix for n in tree])
 
+    def test_31_parent_and_children(self):
+        tree = radix.Radix()
+        root_node = tree.add('10.0.0.0/24')
+        left_node = tree.add('10.0.0.0/25')
+        right_node = tree.add('10.0.0.128/25')
+        expected = tree.add('10.0.0.0/30')
+        node = tree.add('10.0.0.1/32')
+        actual_node_root = node.parent
+        self.assertEqual(expected, actual_node_root)
+        self.assertEqual(left_node, root_node.left)
+        self.assertEqual(right_node, root_node.right)
+        # change parent
+        new_node_root = tree.add('10.0.0.0/31')
+        self.assertEqual(new_node_root, node.parent)
+
+
 def main():
     unittest.main()
 
