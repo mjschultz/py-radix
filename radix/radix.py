@@ -207,6 +207,7 @@ class RadixTree(object):
         if node.right and node.left:
             node._prefix.addr = None
             node.data = None
+            node.bitlen = 0
             return
         if node.right is None and node.left is None:
             parent = node.parent
