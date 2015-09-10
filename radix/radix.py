@@ -380,7 +380,7 @@ class RadixNode(object):
             self._prefix = prefix
         else:
             self._prefix = RadixGlue(bitlen=prefix_size)
-        self.parent = parent
+        self._parent = parent
         self.bitlen = self._prefix.bitlen
         self.left = left
         self.right = right
@@ -412,6 +412,14 @@ class RadixNode(object):
     @property
     def packed(self):
         return self._prefix.packed
+
+    def __set_parent(self, parent):
+        self._parent = parent
+
+    def __get_parent(self):
+        return self._parent
+
+    parent = property(__get_parent, __set_parent, None, "parent of node")
 
 
 class Radix(object):
