@@ -205,8 +205,9 @@ class RadixTree(object):
 
     def remove(self, node):
         if node.right and node.left:
-            node._prefix = None
+            node._prefix.addr = None
             node.data = None
+            node.bitlen = 0
             return
         if node.right is None and node.left is None:
             parent = node.parent
@@ -258,7 +259,7 @@ class RadixTree(object):
 
         stack = []
         while node.bitlen < bitlen:
-            if node._prefix:
+            if node._prefix.addr:
                 stack.append(node)
             if self._addr_test(addr, node.bitlen):
                 node = node.right
@@ -266,7 +267,7 @@ class RadixTree(object):
                 node = node.left
             if node is None:
                 break
-        if node and node._prefix:
+        if node and node._prefix.addr:
             stack.append(node)
         if len(stack) <= 0:
             return None
@@ -291,7 +292,7 @@ class RadixTree(object):
             if node is None:
                 return None
 
-        if node.bitlen > bitlen or node._prefix is None:
+        if node.bitlen > bitlen or node._prefix.addr is None:
             return None
 
         if self._prefix_match(node._prefix, prefix, bitlen):
@@ -307,7 +308,7 @@ class RadixTree(object):
 
         stack = []
         while node.bitlen < bitlen:
-            if node._prefix:
+            if node._prefix.addr:
                 stack.append(node)
             if self._addr_test(addr, node.bitlen):
                 node = node.right
@@ -315,7 +316,7 @@ class RadixTree(object):
                 node = node.left
             if node is None:
                 break
-        if node and node._prefix:
+        if node and node._prefix.addr:
             stack.append(node)
         if len(stack) <= 0:
             return None
@@ -494,7 +495,7 @@ class Radix(object):
                                 packed=packed)
         stack = []
         while node is not None:
-            if node._prefix and node.data is not None:
+            if node._prefix.addr and node.data is not None:
                 stack.append(node)
             node = node.parent
         return stack
@@ -502,7 +503,7 @@ class Radix(object):
     def _iter(self, node):
         stack = []
         while node is not None:
-            if node._prefix and node.data is not None:
+            if node._prefix.addr and node.data is not None:
                 yield node
             if node.left:
                 if node.right:
