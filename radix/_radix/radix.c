@@ -535,7 +535,9 @@ radix_search_covered(radix_tree_t *radix, prefix_t *prefix, rdx_search_cb_t func
                         pst->checked = (pst[-1].checked || node->prefix != NULL);
                         break;
                 case RADIX_STATE_SELF:
-                        if (inclusive || stackpos > 0 || pst->node->bit > prefix->bitlen) {
+                        if (stackpos > 0 || (inclusive ?
+                                             pst->node->bit >= prefix->bitlen:
+                                             pst->node->bit > prefix->bitlen)) {
                                 if (pst->node->prefix != NULL &&
                                     (rc = func(pst->node, cbctx)) != 0)
                                         return (rc);

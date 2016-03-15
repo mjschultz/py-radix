@@ -410,6 +410,7 @@ class TestRadix(unittest.TestCase):
         tree.add('10.0.0.0/13')
         tree.add('10.0.0.0/31')
         tree.add('11.0.0.0/16')
+        tree.add('0.0.0.0/0')
         self.assertEquals(
             [n.prefix for n in tree.search_covered('11.0.0.0/8')],
             ['11.0.0.0/16'])
@@ -426,8 +427,11 @@ class TestRadix(unittest.TestCase):
             [n.prefix for n in tree.search_covered('21.0.0.0/8')],
             [])
         self.assertEquals(
+            [n.prefix for n in tree.search_covered('10.0.0.1')],
+            [])
+        self.assertEquals(
             sorted([n.prefix for n in tree.search_covered('0.0.0.0/0')]),
-            ['10.0.0.0/13', '10.0.0.0/31', '10.0.0.0/8', '11.0.0.0/16'])
+            ['0.0.0.0/0', '10.0.0.0/13', '10.0.0.0/31', '10.0.0.0/8', '11.0.0.0/16'])
 
     def test_27_search_covered_segfault(self):
         # the following will make py-radix 0.8 segfault
