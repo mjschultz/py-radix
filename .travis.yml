@@ -6,9 +6,9 @@ python:
   - "pypy"
   - "2.6"
   - "2.7"
-  - "3.2"
   - "3.3"
   - "3.4"
+  - "3.5"
 
 env:
   - RADIX_NO_EXT=true
@@ -20,7 +20,7 @@ matrix:
       env: RADIX_NO_EXT=false
 
 install:
-  - pip install --use-mirrors coveralls 
+  - pip install coveralls 
   - python setup.py install
 
 script:
