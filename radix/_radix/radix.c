@@ -505,7 +505,7 @@ radix_search_covered(radix_tree_t *radix, prefix_t *prefix, rdx_search_cb_t func
 
         stack[0].state = RADIX_STATE_LEFT;
         stack[0].node = node;
-        stack[0].checked = (node == prefixed_node);
+        stack[0].checked = (node == prefixed_node && node->bit >= prefix->bitlen);
         stackpos = 0;
 
         while (stackpos >= 0) {
