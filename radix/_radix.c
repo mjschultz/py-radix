@@ -117,10 +117,9 @@ RadixNode_dealloc(RadixNodeObject *self)
 static PyObject *
 Radix_parent(RadixNodeObject *self, void *closure)
 {
-PyObject *ret;
+        PyObject *ret;
         radix_node_t *node;
         node = self->rn;
-        ret = Py_None;
         /* walk up through parent to find parent node with data */
         for ( ; ; )
         {
@@ -131,13 +130,13 @@ PyObject *ret;
                         {
                                 ret = node->data;
                                 Py_XINCREF(ret);
-                                break;
+                                return ret;
                         }
                 }
                 else
                         break;
         }
-        return ret;
+        Py_RETURN_NONE;
 }
 static PyMemberDef RadixNode_members[] = {
         {"data",        T_OBJECT, offsetof(RadixNodeObject, user_attr), READONLY},
