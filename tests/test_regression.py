@@ -16,28 +16,49 @@
 
 # $Id$
 
-import sys
+import pickle
+import platform
 import radix
-import unittest
 import socket
 import struct
-import pickle
-if sys.version_info[0] >= 3:
+import sys
+if sys.version_info < (2, 7):
+    import unittest2 as unittest
+else:
+    import unittest
+
+if sys.version_info < (3, 2):
+    # for 2.x
+    import cPickle
+    t14_packed_addr = '\xe0\x14\x0b@'
+    t15_packed_addr = ('\xde\xad\xbe\xef\x124Vx'
+                       '\x9a\xbc\xde\xf0\x00\x00\x00\x00')
+    range = xrange
+else:
     # for Py3K
     t14_packed_addr = struct.pack('4B', 0xe0, 0x14, 0x0b, 0x40)
     t15_packed_addr = struct.pack(
         '16B',
         0xde, 0xad, 0xbe, 0xef, 0x12, 0x34, 0x56, 0x78,
         0x9a, 0xbc, 0xde, 0xf0, 0x00, 0x00, 0x00, 0x00)
-else:
-    # for 2.x
-    import cPickle
-    t14_packed_addr = '\xe0\x14\x0b@'
-    t15_packed_addr = ('\xde\xad\xbe\xef\x124Vx'
-                       '\x9a\xbc\xde\xf0\x00\x00\x00\x00')
 
 
 class TestRadix(unittest.TestCase):
+
+    @unittest.skipIf(
+        'PyPy' == platform.python_implementation(),
+        'PyPy has no refcounts'
+    )
+    def test_000_check_incref(self):
+        tree = radix.Radix()
+        node = tree.add('10.0.1.0/24')
+
+        # it takes a number of tries to cause a problem, so this is more of a
+        # smoke test
+        curr_refs = sys.getrefcount(None)
+        for __ in range(curr_refs+1):
+            self.assertEqual(type(None), type(node.parent))
+
     def test_00__create_destroy(self):
         tree = radix.Radix()
         self.assertTrue('radix.Radix' in str(type(tree)))
