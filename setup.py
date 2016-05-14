@@ -27,6 +27,11 @@ if not IS_PYPY and not RADIX_NO_EXT:
     extra_kwargs['ext_modules'] = [radix]
 
 
+tests_require = ['nose', 'coverage']
+if sys.version_info < (2, 7):
+    tests_require.append('unittest2')
+
+
 setup(
     name='py-radix',
     version='0.9.5',
@@ -50,7 +55,7 @@ setup(
         'Programming Language :: Python :: 3.4',
         'Programming Language :: Python :: 3.5',
     ],
-    tests_require=['nose', 'coverage'],
+    tests_require=tests_require,
     packages=find_packages(exclude=['tests', 'tests.*']),
     test_suite='nose.collector',
     **extra_kwargs
