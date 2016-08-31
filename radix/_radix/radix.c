@@ -297,7 +297,9 @@ radix_node_t
 radix_node_t
 *radix_search_node(radix_tree_t *radix, prefix_t *prefix)
 {
-        radix_node_t *node, *head;
+        radix_node_t *node, *head, *node_iter;
+        int right_mismatch = 0;
+        int left_mismatch = 0;
         u_int bitlen;
 
         if ((head = RADIX_HEAD_BY_PREFIX(radix, prefix)) == NULL)
@@ -322,9 +324,6 @@ radix_node_t
         // When this happens we have to check the two subtrees, if a subtree does not match, that part should
         // not be returned. If both match the entire node should be returned. If none match, null is returned.
 
-        int right_mismatch = 0;
-        int left_mismatch = 0;
-        radix_node_t *node_iter;
 
         RADIX_WALK(node->r, node_iter) {
             if (node_iter->data != NULL) {
