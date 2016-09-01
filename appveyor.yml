@@ -24,7 +24,9 @@ environment:
 
 install:
   # We need wheel installed to build wheels
-  - "IF %SDK_64% == Y ( %WIN_SDK_ROOT%\%WINDOWS_SDK_VERSION%\Bin\SetEnv.cmd /x64 /release )"
+  - IF "%SDK_64%" == "Y" (
+      %WIN_SDK_ROOT%\%WINDOWS_SDK_VERSION%\Bin\SetEnv.cmd /x64 /release
+    )
   - "%PYTHON%\\python.exe setup.py install"
 
 build: off
