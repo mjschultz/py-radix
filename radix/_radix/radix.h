@@ -63,6 +63,7 @@
 #if defined(_MSC_VER)
 #include <winsock2.h>
 #include <ws2tcpip.h>
+#pragma comment(lib,"ws2_32.lib")
 #else
 # include <sys/types.h>
 # include <sys/socket.h>
@@ -76,7 +77,6 @@
 typedef unsigned __int8         u_int8_t;
 typedef unsigned __int16        u_int16_t;
 typedef unsigned __int32        u_int32_t;
-const char *inet_ntop(int af, const void *src, char *dst, size_t size);
 size_t strlcpy(char *dst, const char *src, size_t size);
 #endif
 
