@@ -354,7 +354,7 @@ Radix_add(RadixObject *self, PyObject *args, PyObject *kw_args)
         long prefixlen = -1;
         int packlen = -1;
 
-        if (!PyArg_ParseTupleAndKeywords(args, kw_args, "|sls#:add", keywords,
+        if (!PyArg_ParseTupleAndKeywords(args, kw_args, "|zlz#:add", keywords,
             &addr, &prefixlen, &packed, &packlen))
                 return NULL;
         if ((prefix = args_to_prefix(NULL, addr, packed, packlen, prefixlen)) == NULL)
@@ -383,7 +383,7 @@ Radix_delete(RadixObject *self, PyObject *args, PyObject *kw_args)
         long prefixlen = -1;
         int packlen = -1;
 
-        if (!PyArg_ParseTupleAndKeywords(args, kw_args, "|sls#:delete", keywords,
+        if (!PyArg_ParseTupleAndKeywords(args, kw_args, "|zlz#:delete", keywords,
             &addr, &prefixlen, &packed, &packlen))
                 return NULL;
         if ((prefix = args_to_prefix(&lprefix, addr, packed, packlen, prefixlen)) == NULL)
@@ -426,7 +426,7 @@ Radix_search_exact(RadixObject *self, PyObject *args, PyObject *kw_args)
         long prefixlen = -1;
         int packlen = -1;
 
-        if (!PyArg_ParseTupleAndKeywords(args, kw_args, "|sls#:search_exact", keywords,
+        if (!PyArg_ParseTupleAndKeywords(args, kw_args, "|zlz#:search_exact", keywords,
             &addr, &prefixlen, &packed, &packlen))
                 return NULL;
         if ((prefix = args_to_prefix(&lprefix, addr, packed, packlen, prefixlen)) == NULL)
@@ -464,7 +464,7 @@ Radix_search_best(RadixObject *self, PyObject *args, PyObject *kw_args)
         long prefixlen = -1;
         int packlen = -1;
 
-        if (!PyArg_ParseTupleAndKeywords(args, kw_args, "|sls#:search_best", keywords,
+        if (!PyArg_ParseTupleAndKeywords(args, kw_args, "|zlz#:search_best", keywords,
             &addr, &prefixlen, &packed, &packlen))
                 return NULL;
         if ((prefix = args_to_prefix(&lprefix, addr, packed, packlen, prefixlen)) == NULL)
@@ -502,7 +502,7 @@ Radix_search_worst(RadixObject *self, PyObject *args, PyObject *kw_args)
         long prefixlen = -1;
         int packlen = -1;
 
-        if (!PyArg_ParseTupleAndKeywords(args, kw_args, "|sls#:search_worst", keywords,
+        if (!PyArg_ParseTupleAndKeywords(args, kw_args, "|zlz#:search_worst", keywords,
             &addr, &prefixlen, &packed, &packlen))
                 return NULL;
         if ((prefix = args_to_prefix(&lprefix, addr, packed, packlen, prefixlen)) == NULL)
@@ -545,7 +545,7 @@ Radix_search_covered(RadixObject *self, PyObject *args, PyObject *kw_args)
         long prefixlen = -1;
         int packlen = -1;
 
-        if (!PyArg_ParseTupleAndKeywords(args, kw_args, "|sls#:search_covered", keywords, &addr, &prefixlen, &packed, &packlen))
+        if (!PyArg_ParseTupleAndKeywords(args, kw_args, "|zlz#:search_covered", keywords, &addr, &prefixlen, &packed, &packlen))
                 return NULL;
 
         if ((prefix = args_to_prefix(&lprefix, addr, packed, packlen, prefixlen)) == NULL)
@@ -578,7 +578,7 @@ Radix_search_covering(RadixObject *self, PyObject *args, PyObject *kw_args)
         long prefixlen = -1;
         int packlen = -1;
 
-        if (!PyArg_ParseTupleAndKeywords(args, kw_args, "|sls#:search_covering", keywords, &addr, &prefixlen, &packed, &packlen)) {
+        if (!PyArg_ParseTupleAndKeywords(args, kw_args, "|zlz#:search_covering", keywords, &addr, &prefixlen, &packed, &packlen)) {
                 return NULL;
         }
 
