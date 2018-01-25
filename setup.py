@@ -56,7 +56,7 @@ setup(
         'Programming Language :: Python :: 3.5',
     ],
     tests_require=tests_require,
-    packages=find_packages(exclude=['tests', 'tests.*']),
+    packages=find_packages(),
     test_suite='nose.collector',
     **extra_kwargs
 )
