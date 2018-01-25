@@ -340,7 +340,7 @@ socket.inet_ntoa(), etc.\n\
 Both IPv4 and IPv6 addresses/networks are supported and may be mixed in\n\
 the same tree.\n\
 \n\
-This method returns a RadixNode object. Arbitrary data may be strored\n\
+This method returns a RadixNode object. Arbitrary data may be stored\n\
 in the RadixNode.data dict.");
 
 static PyObject *
