@@ -28,8 +28,6 @@ if not IS_PYPY and not RADIX_NO_EXT:
 
 
 tests_require = ['nose', 'coverage']
-if sys.version_info < (2, 7):
-    tests_require.append('unittest2')
 
 
 setup(
@@ -58,5 +56,6 @@ setup(
     tests_require=tests_require,
     packages=find_packages(),
     test_suite='nose.collector',
+    python_requires='>=2.7',
     **extra_kwargs
 )
