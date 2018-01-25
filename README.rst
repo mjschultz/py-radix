@@ -117,7 +117,7 @@ A simple example that demonstrates most of the features: ::
 License
 -------
 
-py-radix is licensed under a ISC/BSD licence. The underlying radix tree 
+py-radix is licensed under the ISC licence. The underlying radix tree 
 implementation is taken (and modified) from MRTd and is subject to a 4-term 
 BSD license. See the LICENSE file for details.
 

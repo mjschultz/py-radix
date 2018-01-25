@@ -28,8 +28,6 @@ if not IS_PYPY and not RADIX_NO_EXT:
 
 
 tests_require = ['nose', 'coverage']
-if sys.version_info < (2, 7):
-    tests_require.append('unittest2')
 
 
 setup(
@@ -40,13 +38,14 @@ setup(
     url='https://github.com/mjschultz/py-radix',
     description='Radix tree implementation',
     long_description=README,
-    license='BSD',
+    license='BSD-4-Clause',  # BSD-4-Clause is more restrictive than ISC
     keywords='radix tree trie python routing networking',
     classifiers=[
         'Intended Audience :: Developers',
         'Topic :: Software Development :: Libraries :: Python Modules',
         'Topic :: System :: Networking',
         'License :: OSI Approved :: BSD License',
+        'License :: OSI Approved :: ISC License (ISCL)',
         'Programming Language :: Python :: 2',
         'Programming Language :: Python :: 2.7',
         'Programming Language :: Python :: 3',
@@ -55,7 +54,8 @@ setup(
         'Programming Language :: Python :: 3.5',
     ],
     tests_require=tests_require,
-    packages=find_packages(exclude=['tests', 'tests.*']),
+    packages=find_packages(),
     test_suite='nose.collector',
+    python_requires='>=2.7',
     **extra_kwargs
 )
