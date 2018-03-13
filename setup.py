@@ -57,7 +57,7 @@ setup(
     tests_require=tests_require,
     packages=find_packages(exclude=['tests', 'tests.*']),
     install_requires=[
-        'win-inet-pton;platform_system=="Windows"'
+        'win-inet-pton >= 1.0.1;platform_system=="Windows"'
     ],
     test_suite='nose.collector',
     **extra_kwargs
