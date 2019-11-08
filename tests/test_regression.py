@@ -189,7 +189,7 @@ class TestRadix(unittest.TestCase):
         tree = radix.Radix()
         node1 = tree.add("10.0.0.0/8")
         del tree
-        self.assertEquals(node1.prefix, "10.0.0.0/8")
+        self.assertEqual(node1.prefix, "10.0.0.0/8")
 
     def test_11__unique_instance(self):
         tree = radix.Radix()
@@ -205,7 +205,7 @@ class TestRadix(unittest.TestCase):
         node3 = tree.add(network="10.255.255.252", masklen=28)
         self.assertTrue(node1 is node2)
         self.assertTrue(node1 is node3)
-        self.assertEquals(node1.prefix, "10.255.255.240/28")
+        self.assertEqual(node1.prefix, "10.255.255.240/28")
 
     def test_13__inconsistent_masks6(self):
         tree = radix.Radix()
@@ -214,15 +214,15 @@ class TestRadix(unittest.TestCase):
         node3 = tree.add(network="dead:beef::", masklen=32)
         self.assertTrue(node1 is node2)
         self.assertTrue(node1 is node3)
-        self.assertEquals(node1.prefix, "dead:beef::/32")
+        self.assertEqual(node1.prefix, "dead:beef::/32")
 
     def test_14__packed_addresses4(self):
         tree = radix.Radix()
         p = struct.pack('4B', 0xe0, 0x14, 0x0b, 0x40)
         node = tree.add(packed=p, masklen=26)
-        self.assertEquals(node.family, socket.AF_INET)
-        self.assertEquals(node.prefix, "224.20.11.64/26")
-        self.assertEquals(node.packed, p)
+        self.assertEqual(node.family, socket.AF_INET)
+        self.assertEqual(node.prefix, "224.20.11.64/26")
+        self.assertEqual(node.packed, p)
 
     def test_15__packed_addresses6(self):
         tree = radix.Radix()
@@ -231,11 +231,11 @@ class TestRadix(unittest.TestCase):
             0xde, 0xad, 0xbe, 0xef, 0x12, 0x34, 0x56, 0x78,
             0x9a, 0xbc, 0xde, 0xf0, 0x00, 0x00, 0x00, 0x00)
         node = tree.add(packed=p, masklen=108)
-        self.assertEquals(node.family, socket.AF_INET6)
-        self.assertEquals(
+        self.assertEqual(node.family, socket.AF_INET6)
+        self.assertEqual(
             node.prefix,
             "dead:beef:1234:5678:9abc:def0::/108")
-        self.assertEquals(node.packed, p)
+        self.assertEqual(node.packed, p)
 
     def test_16__bad_addresses(self):
         tree = radix.Radix()
@@ -246,7 +246,7 @@ class TestRadix(unittest.TestCase):
         self.assertRaises(ValueError, tree.add, "127.0.0.1", 64)
         self.assertRaises(ValueError, tree.add, "::", -2)
         self.assertRaises(ValueError, tree.add, "::", 256)
-        self.assertEquals(len(tree.nodes()), 0)
+        self.assertEqual(len(tree.nodes()), 0)
 
     def test_17__mixed_address_family(self):
         tree = radix.Radix()
@@ -256,9 +256,9 @@ class TestRadix(unittest.TestCase):
         node2_o = tree.search_best("ffff::")
         self.assertTrue(node1 is node1_o)
         self.assertTrue(node2 is node2_o)
-        self.assertNotEquals(node1.prefix, node2.prefix)
-        self.assertNotEquals(node1.network, node2.network)
-        self.assertNotEquals(node1.family, node2.family)
+        self.assertNotEqual(node1.prefix, node2.prefix)
+        self.assertNotEqual(node1.network, node2.network)
+        self.assertNotEqual(node1.family, node2.family)
 
     def test_18__iterator(self):
         tree = radix.Radix()
@@ -321,18 +321,18 @@ class TestRadix(unittest.TestCase):
             j = node.data["j"]
             k = ((i + j) % 8) + 24
             prefix = "1.%d.%d.0/%d" % (i, j, k)
-            self.assertEquals(node.prefix, prefix)
+            self.assertEqual(node.prefix, prefix)
             num_nodes_out += 1
 
-        self.assertEquals(num_nodes_in - num_nodes_del, num_nodes_out)
-        self.assertEquals(
+        self.assertEqual(num_nodes_in - num_nodes_del, num_nodes_out)
+        self.assertEqual(
             num_nodes_in - num_nodes_del,
             len(tree.nodes()))
 
     def test_22__broken_sanitise(self):
         tree = radix.Radix()
         node = tree.add("255.255.255.255/15")
-        self.assertEquals(node.prefix, "255.254.0.0/15")
+        self.assertEqual(node.prefix, "255.254.0.0/15")
 
     def test_21__pickle(self):
         tree = radix.Radix()
@@ -353,11 +353,11 @@ class TestRadix(unittest.TestCase):
                 k = ((i + j) % 8) + 24
                 addr = "1.%d.%d.0" % (i, j)
                 node = tree2.search_exact(addr, k)
-                self.assertNotEquals(node, None)
-                self.assertEquals(node.data["i"], i)
-                self.assertEquals(node.data["j"], j)
+                self.assertNotEqual(node, None)
+                self.assertEqual(node.data["i"], i)
+                self.assertEqual(node.data["j"], j)
                 node.data["j"] = j
-        self.assertEquals(len(tree2.nodes()), num_nodes_in)
+        self.assertEqual(len(tree2.nodes()), num_nodes_in)
 
     def test_21__cpickle(self):
         if sys.version_info[0] >= 3:
@@ -380,18 +380,18 @@ class TestRadix(unittest.TestCase):
                 k = ((i + j) % 8) + 24
                 addr = "1.%d.%d.0" % (i, j)
                 node = tree2.search_exact(addr, k)
-                self.assertNotEquals(node, None)
-                self.assertEquals(node.data["i"], i)
-                self.assertEquals(node.data["j"], j)
+                self.assertNotEqual(node, None)
+                self.assertEqual(node.data["i"], i)
+                self.assertEqual(node.data["j"], j)
                 node.data["j"] = j
-        self.assertEquals(len(tree2.nodes()), num_nodes_in)
+        self.assertEqual(len(tree2.nodes()), num_nodes_in)
 
     def test_22_search_best(self):
         tree = radix.Radix()
         tree.add('10.0.0.0/8')
         tree.add('10.0.0.0/13')
         tree.add('10.0.0.0/16')
-        self.assertEquals(
+        self.assertEqual(
             tree.search_best('10.0.0.0/15').prefix,
             '10.0.0.0/13')
 
@@ -409,10 +409,10 @@ class TestRadix(unittest.TestCase):
         tree.add('10.0.0.0/8')
         tree.add('10.0.0.0/13')
         tree.add('10.0.0.0/16')
-        self.assertEquals(
+        self.assertEqual(
             tree.search_worst('10.0.0.0/15').prefix,
             '10.0.0.0/8')
-        self.assertEquals(
+        self.assertEqual(
             tree.search_worst('100.0.0.0/15'),
             None)
 
@@ -421,7 +421,7 @@ class TestRadix(unittest.TestCase):
         tree.add('192.168.30.0/24')
         tree.add('1.1.2.0/24')
         tree.add('0.0.0.0/0')
-        self.assertEquals(
+        self.assertEqual(
             tree.search_best('10.10.10.10').prefix,
             '0.0.0.0/0')
 
@@ -434,28 +434,28 @@ class TestRadix(unittest.TestCase):
         tree.add('10.30.2.1/32')
         tree.add('10.30.2.0/25')
         tree.add('0.0.0.0/0')
-        self.assertEquals(
+        self.assertEqual(
             [n.prefix for n in tree.search_covered('11.0.0.0/8')],
             ['11.0.0.0/16'])
-        self.assertEquals(
+        self.assertEqual(
             sorted([n.prefix for n in tree.search_covered('10.0.0.0/9')]),
             ['10.0.0.0/13', '10.0.0.0/31', '10.30.2.0/25', '10.30.2.1/32'])
-        self.assertEquals(
+        self.assertEqual(
             sorted([n.prefix for n in tree.search_covered('10.0.0.0/8')]),
             ['10.0.0.0/13', '10.0.0.0/31', '10.0.0.0/8', '10.30.2.0/25', '10.30.2.1/32'])
-        self.assertEquals(
+        self.assertEqual(
             [n.prefix for n in tree.search_covered('11.0.0.0/8')],
             ['11.0.0.0/16'])
-        self.assertEquals(
+        self.assertEqual(
             [n.prefix for n in tree.search_covered('10.30.2.64/32')],
             [])
-        self.assertEquals(
+        self.assertEqual(
             [n.prefix for n in tree.search_covered('21.0.0.0/8')],
             [])
-        self.assertEquals(
+        self.assertEqual(
             [n.prefix for n in tree.search_covered('10.0.0.1')],
             [])
-        self.assertEquals(
+        self.assertEqual(
             sorted([n.prefix for n in tree.search_covered('0.0.0.0/0')]),
             ['0.0.0.0/0', '10.0.0.0/13', '10.0.0.0/31', '10.0.0.0/8', '10.30.2.0/25', '10.30.2.1/32', '11.0.0.0/16'])
 
@@ -465,7 +465,7 @@ class TestRadix(unittest.TestCase):
         tree.add('193.178.156.0/24')
         tree.add('193.178.157.0/24')
 
-        self.assertEquals(
+        self.assertEqual(
             [n.prefix for n in tree.search_covered('193.178.152.0/21')],
             ['193.178.156.0/24', '193.178.157.0/24']
         )
@@ -475,7 +475,7 @@ class TestRadix(unittest.TestCase):
         tree.add('27.0.100.0/24')
         tree.add('27.0.101.0/24')
 
-        self.assertEquals(
+        self.assertEqual(
             [n.prefix for n in tree.search_covered('31.3.104.0/21')],
             []
         )
@@ -488,16 +488,16 @@ class TestRadix(unittest.TestCase):
         tree.add('3.178.156.0/24')
         tree.add('3.178.157.0/24')
 
-        self.assertEquals([n.prefix for n in
+        self.assertEqual([n.prefix for n in
                            tree.search_covering('8.9.0.1/32')],
                           ['8.9.0.1/32', '8.9.0.0/16', '0.0.0.0/2'])
-        self.assertEquals([n.prefix for n in
+        self.assertEqual([n.prefix for n in
                            tree.search_covering('5.5.5.0/24')],
                           ['0.0.0.0/2'])
-        self.assertEquals([n.prefix for n in
+        self.assertEqual([n.prefix for n in
                            tree.search_covering('3.178.152.0/21')],
                           ['0.0.0.0/2'])
-        self.assertEquals([n.prefix for n in
+        self.assertEqual([n.prefix for n in
                            tree.search_covering('205.0.1.0/24')],
                           [])
 
