@@ -30,7 +30,7 @@ class LoadRadixPickle(TestCase):
     def _check_file(self, file_name):
         with open(join(self.data_dir, file_name), 'rb') as f:
             tree = load(f)
-        self.assertEquals(len(tree.nodes()), 3)
+        self.assertEqual(len(tree.nodes()), 3)
         nodes = ['10.0.1.0/24', '10.0.2.0/24', '10.0.3.0/24']
         for actual, expected in zip(tree.nodes(), nodes):
             self.assertEqual(actual.prefix, expected)
