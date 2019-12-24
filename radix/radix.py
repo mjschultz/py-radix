@@ -375,6 +375,8 @@ class RadixGlue(RadixPrefix):
 
 
 class RadixNode(object):
+    count = 0
+
     def __init__(self, prefix=None, prefix_size=None, data=None,
                  parent=None, left=None, right=None):
         if prefix:
@@ -387,6 +389,10 @@ class RadixNode(object):
         self.right = right
         self.data = data
         self._cache = {}
+
+        self.node_id = RadixNode.count
+        RadixNode.count += 1
+
 
     def __str__(self):
         return self.prefix
