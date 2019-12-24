@@ -390,6 +390,8 @@ class RadixNode(object):
         self.data = data
         self.cache = {}
 
+        self.free = True
+
         self.node_id = RadixNode.count
         RadixNode.count += 1
 
