@@ -20,10 +20,10 @@ with codecs.open(join(here, 'README.rst'), encoding='utf-8') as f:
 # introduce some extra setup_args if Python 2.x
 extra_kwargs = {}
 if not IS_PYPY and not RADIX_NO_EXT:
-    sources = ['radix/_radix.c', 'radix/_radix/radix.c']
-    radix = Extension('radix._radix',
+    sources = ['aggregate_radix/_radix.c', 'aggregate_radix/_radix/radix.c']
+    radix = Extension('aggregate_radix._radix',
                       sources=sources,
-                      include_dirs=[join(here, 'radix')])
+                      include_dirs=[join(here, 'aggregate_radix')])
     extra_kwargs['ext_modules'] = [radix]
 
 
