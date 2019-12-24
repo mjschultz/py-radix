@@ -12,7 +12,8 @@ class RadixPrefix(object):
         if network and packed:
             raise ValueError('Two address types specified. Please pick one.')
         if network is None and packed is None:
-            raise TypeError('No address specified (use `address` or `packed`)')
+            self.addr = None
+            self.bitlen = None
 
         if network:
             self._from_network(network, masklen)
@@ -382,7 +383,7 @@ class RadixNode(object):
         if prefix:
             self.prefix = prefix
         else:
-            self.prefix = RadixGlue(bitlen=prefix_size)
+            self.prefix = RadixPrefix()
         self.parent = parent
         self.bitlen = self.prefix.bitlen
         self.left = left
