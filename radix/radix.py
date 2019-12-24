@@ -377,7 +377,7 @@ class RadixGlue(RadixPrefix):
 class RadixNode(object):
     count = 0
 
-    def __init__(self, prefix=None, prefix_size=None, data=None,
+    def __init__(self, prefix=None, prefix_size=None, data={},
                  parent=None, left=None, right=None):
         if prefix:
             self.prefix = prefix
@@ -401,6 +401,18 @@ class RadixNode(object):
 
     def __repr__(self):
         return '<{0}>'.format(self.prefix)
+
+    def set(self, prefix):
+        self.prefix = prefix
+        self.bitlen = prefix.bitlen
+        self.free = False
+
+    def reset(self):
+        self.prefix = None
+        self.left = None
+        self.right = None
+        self.data = {}
+        self.free = True
 
     @property
     def network(self):
