@@ -380,15 +380,15 @@ class RadixNode(object):
     def __init__(self, prefix=None, prefix_size=None, data=None,
                  parent=None, left=None, right=None):
         if prefix:
-            self._prefix = prefix
+            self.prefix = prefix
         else:
-            self._prefix = RadixGlue(bitlen=prefix_size)
-        self._parent = parent
-        self.bitlen = self._prefix.bitlen
+            self.prefix = RadixGlue(bitlen=prefix_size)
+        self.parent = parent
+        self.bitlen = self.prefix.bitlen
         self.left = left
         self.right = right
         self.data = data
-        self._cache = {}
+        self.cache = {}
 
         self.node_id = RadixNode.count
         RadixNode.count += 1
@@ -402,11 +402,11 @@ class RadixNode(object):
 
     @property
     def network(self):
-        return self._prefix.network
+        return self.prefix.network
 
     @property
     def prefix(self):
-        return str(self._prefix)
+        return str(self.prefix)
 
     @property
     def prefixlen(self):
@@ -414,33 +414,33 @@ class RadixNode(object):
 
     @property
     def family(self):
-        return self._prefix.family
+        return self.prefix.family
 
     @property
     def packed(self):
-        return self._prefix.packed
+        return self.prefix.packed
 
     def __set_parent(self, parent):
-        self._parent = parent
+        self.parent = parent
 
     def __get_parent(self):
-        return self._parent
+        return self.parent
 
     parent = property(__get_parent, __set_parent, None, "parent of node")
 
 
 class Radix(object):
     def __init__(self):
-        self._tree4 = RadixTree()
-        self._tree6 = RadixTree()
+        self.tree4 = RadixTree()
+        self.tree6 = RadixTree()
         self.gen_id = 0            # detection of modifiction during iteration
 
     def add(self, network=None, masklen=None, packed=None):
         prefix = RadixPrefix(network, masklen, packed)
         if prefix.family == AF_INET:
-            node = self._tree4.add(prefix)
+            node = self.tree4.add(prefix)
         else:
-            node = self._tree6.add(prefix)
+            node = self.tree6.add(prefix)
         if node.data is None:
             node.data = {}
         self.gen_id += 1
@@ -451,17 +451,17 @@ class Radix(object):
         if not node:
             raise KeyError('match not found')
         if node.family == AF_INET:
-            self._tree4.remove(node)
+            self.tree4.remove(node)
         else:
-            self._tree6.remove(node)
+            self.tree6.remove(node)
         self.gen_id += 1
 
     def search_exact(self, network=None, masklen=None, packed=None):
         prefix = RadixPrefix(network, masklen, packed)
         if prefix.family == AF_INET:
-            node = self._tree4.search_exact(prefix)
+            node = self.tree4.search_exact(prefix)
         else:
-            node = self._tree6.search_exact(prefix)
+            node = self.tree6.search_exact(prefix)
         if node and node.data is not None:
             return node
         else:
@@ -470,9 +470,9 @@ class Radix(object):
     def search_best(self, network=None, masklen=None, packed=None):
         prefix = RadixPrefix(network, masklen, packed)
         if prefix.family == AF_INET:
-            node = self._tree4.search_best(prefix)
+            node = self.tree4.search_best(prefix)
         else:
-            node = self._tree6.search_best(prefix)
+            node = self.tree6.search_best(prefix)
         if node and node.data is not None:
             return node
         else:
@@ -481,9 +481,9 @@ class Radix(object):
     def search_worst(self, network=None, masklen=None, packed=None):
         prefix = RadixPrefix(network, masklen, packed)
         if prefix.family == AF_INET:
-            node = self._tree4.search_worst(prefix)
+            node = self.tree4.search_worst(prefix)
         else:
-            node = self._tree6.search_worst(prefix)
+            node = self.tree6.search_worst(prefix)
         if node and node.data is not None:
             return node
         else:
@@ -492,9 +492,9 @@ class Radix(object):
     def search_covered(self, network=None, masklen=None, packed=None):
         prefix = RadixPrefix(network, masklen, packed)
         if prefix.family == AF_INET:
-            return self._tree4.search_covered(prefix)
+            return self.tree4.search_covered(prefix)
         else:
-            return self._tree6.search_covered(prefix)
+            return self.tree6.search_covered(prefix)
 
     def search_covering(self, network=None, masklen=None, packed=None):
         node = self.search_best(network=network, masklen=masklen,
@@ -532,11 +532,11 @@ class Radix(object):
 
     def __iter__(self):
         init_id = self.gen_id
-        for elt in self._iter(self._tree4.head):
+        for elt in self._iter(self.tree4.head):
             if init_id != self.gen_id:
                 raise RuntimeWarning('detected modification during iteration')
             yield elt
-        for elt in self._iter(self._tree6.head):
+        for elt in self._iter(self.tree6.head):
             if init_id != self.gen_id:
                 raise RuntimeWarning('detected modification during iteration')
             yield elt
