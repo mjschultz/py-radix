@@ -1,3 +1,16 @@
+aggradix
+========
+Forked from py-radix.
+
+main changes:
+
+- introduce "aggregation" with IPv6 network prefix.
+
+- always uses RadixNode istead of RadixGlue
+
+- assign node_id to each RadixNode instance
+
+
 py-radix
 ========
 

@@ -20,10 +20,10 @@ with codecs.open(join(here, 'README.rst'), encoding='utf-8') as f:
 # introduce some extra setup_args if Python 2.x
 extra_kwargs = {}
 if not IS_PYPY and not RADIX_NO_EXT:
-    sources = ['aggregate_radix/_radix.c', 'aggregate_radix/_radix/radix.c']
-    radix = Extension('aggregate_radix._radix',
+    sources = ['aggradix/_radix.c', 'aggradix/_radix/radix.c']
+    radix = Extension('aggradix._radix',
                       sources=sources,
-                      include_dirs=[join(here, 'aggregate_radix')])
+                      include_dirs=[join(here, 'aggradix')])
     extra_kwargs['ext_modules'] = [radix]
 
 
@@ -33,12 +33,12 @@ if sys.version_info < (2, 7):
 
 
 setup(
-    name='py-radix',
+    name='aggradix',
     version='0.10.0',
-    maintainer='Michael J. Schultz',
-    maintainer_email='mjschultz@gmail.com',
-    url='https://github.com/mjschultz/py-radix',
-    description='Radix tree implementation',
+    maintainer='Hyuga Kobayashi',
+    maintainer_email='hyuga.hmn15@gmail.com',
+    url='https://github.com/hyugak/aggradix',
+    description='Radix tree implementation with Aggregation',
     long_description=README,
     license='BSD',
     keywords='radix tree trie python routing networking',
