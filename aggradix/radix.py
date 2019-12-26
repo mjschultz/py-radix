@@ -558,9 +558,10 @@ class Radix(object):
             yield elt
 
 
-class AggregateRadix(object):
+class Aggradix(object):
     '''
-    PatriciaTree全体を表す．IPv6のみを格納する
+    RadixTree全体を表す．IPv6のみを格納する
+    LRUキャッシュも同時に管理
     '''
     def __init__(self, root="::", bitlen=0, max_nodes=16):
         self.max_nodes = max_nodes - 2
@@ -603,7 +604,7 @@ class AggregateRadix(object):
         masklen <int>
         
         [output]
-        node <PatriciaNode>
+        node <RadixNode>
 
         [description]
         木を集約・探索・挿入する
@@ -611,12 +612,9 @@ class AggregateRadix(object):
         prefix = RadixPrefix(address, masklen)
 
         # reclaim node
-        # print(f'free: {self.free_nodes}')
 
         if self.free_nodes <= 2:
-            # print([x for x in self.cache.items()])
             self.reclaim_node(2)
-            # print(f'reclaimed: {self.free_nodes}')
 
         addr = prefix.addr
         node = self.head
@@ -707,7 +705,7 @@ class AggregateRadix(object):
         masklen <int>
 
         [output]
-        node <PatriciaNode>
+        node <RadixNode>
 
         [description]
         与えられたプレフィクスに含まれるノードのうち，最もビット長の大きいノードを返す．
@@ -797,11 +795,11 @@ class AggregateRadix(object):
     def common_prefix(self, node1, node2):
         '''
         [input]
-        node1<PatriciaNode>
-        node2<PatriciaNode>
+        node1<RadixNode>
+        node2<RadixNode>
 
         [output]
-        common_prefix<PatriciaPrefix>
+        common_prefix<RadixPrefix>
 
         [description]
         node1とnode2が共通にもつ最も小さいプレフィクスを生成する
@@ -864,8 +862,8 @@ class AggregateRadix(object):
     def prefix_cmp(self, node_prefix, insert_prefix):
         '''
         [input]
-        node_prefix<PatriciaPrefix>: 探索中の対象ノードのプレフィクス
-        insert_prefix<PatriciaPrefx>: 挿入したいアドレスのプレフィクス
+        node_prefix<RadixPrefix>: 探索中の対象ノードのプレフィクス
+        insert_prefix<RadixPrefx>: 挿入したいアドレスのプレフィクス
 
         [output]
         True | False <Bool>
@@ -884,8 +882,8 @@ class AggregateRadix(object):
     def prefix_match(self, prefix1, prefix2, bitlen):
         '''
         [input]
-        prefix1 <PatriciaPrefix>
-        prefix2 <PatriciaPrefix>
+        prefix1 <RadixPrefix>
+        prefix2 <RadixPrefix>
         bitlen <int>
 
         [output]
@@ -911,7 +909,7 @@ class AggregateRadix(object):
     def bit_test(self, node, bitnum):
         '''
         [input]
-        node<PatriciaNode>
+        node<RadixNode>
         bitlen<int>:
 
         [output]
@@ -927,7 +925,7 @@ class AggregateRadix(object):
     def bit_set(self, node, bitnum):
         '''
         [input]
-        node<PatriciaNode>
+        node<RadixNode>
         bitnum<int>
 
         [description]

@@ -1,7 +1,7 @@
-from .radix import AggregateRadix as Radix
+from .radix import Aggradix, RadixNode, RadixPrefix
 
-__version__ = '0.10.0'
-__all__ = ['Radix']
+__version__ = '0.0.1'
+__all__ = ['Aggradix', 'RadixNode', 'RadixPrefix']
 
 
 # # This acts as an entrypoint to the underlying object (be it a C
