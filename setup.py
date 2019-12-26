@@ -34,7 +34,7 @@ if sys.version_info < (2, 7):
 
 setup(
     name='aggradix',
-    version='0.10.0',
+    version='0.0.1',
     maintainer='Hyuga Kobayashi',
     maintainer_email='hyuga.hmn15@gmail.com',
     url='https://github.com/hyugak/aggradix',
