@@ -193,7 +193,7 @@ class Aggradix(object):
                 return node
         return None
     
-    def search_covered(self, address, prefixlen, node=None):
+    def search_covered_top(self, address, prefixlen, node=None):
         '''
         Search Tree 
         It returns the node which is contained in given prefix AND has shortest prefix.
@@ -303,7 +303,7 @@ class Aggradix(object):
         prefix = RadixPrefix(dst_address, 128)
         addr = prefix.addr
 
-        head = self.search_covered(dst_address, masklen)
+        head = self.search_covered_top(dst_address, masklen)
         
         count = 0
         node = head
