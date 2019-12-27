@@ -294,6 +294,40 @@ class Aggradix(object):
 
         return None
 
+    def collect_probe(self, src_addr, head=None):
+        '''
+        Traverse subtree whose head is ${head}.
+        Create hash table from nodes having entry of ${src_addr}
+
+        ex) hash table is like follows
+            { dst_1/plen_1: n1, ..., dst_i/plen_i: n_i, ... }
+
+        Args:
+            src_addr (str): source IPv6 address.
+            head (RadixNode): node we start traversing.
+
+        Returns:
+            hash: hash table like above.
+        '''
+
+        h = {}
+        stack = []
+        stack.append(head)
+
+        while len(stack) > 0:
+            node = stack.pop()
+            if src_addr in node.data.keys():
+                h[(node.prefix.network, node.prefix.bitlen)] = node.data[src_addr]
+
+            if node.left is not None:
+                stack.append(node.left)
+
+            if node.right is not None:
+                stack.append(node.right)
+
+        return h
+
+
     def weighted_count(self, src_address, dst_address, masklen):
         '''
         dst_address/masklenに含まれるノードのうち，dst_address/128を含む枝の
