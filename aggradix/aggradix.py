@@ -192,23 +192,43 @@ class Aggradix(object):
                 return node
         return None
     
-    def search_covered(self, address, masklen):
+    def search_covered(self, address, masklen, node=None):
         '''
         Search Tree 
-        It returns the node which has longest bit and is contained in given prefix.
+        It returns the node which is contained in given prefix AND has shortest prefix.
         If exact-match, it returns the node.
+
+        ex) When tree is like follows,
+
+                           o <-2001:db8::/64
+                          / \
+                ::/101-> o   o <- 2001:db8:0:0:8000::/127
+                        / \
+             ::/128 -> o   o <- ::600:1/128
+
+            # Search for 2001:db8::/96,
+            - when best-match -> 2001:db8::/64
+            + when covered -> 2001:db8::/101
+
+            Nodes contained in ::/96 are [::/101, ::/128, ::600:1/128].
+            And ::/101 has shortest prefix in these nodes.
 
         Args:
             address (str | bytearray): IPv6 network address to search.
             masklen (int): IPv6 network prefix to search.
+            node (RadixNode): If given, search starts from the node.
         
         Returns:
             RadixNode | None: found node.
         '''
         prefix = RadixPrefix(address, masklen)
+        
         if self.head is None:
             return None
-        node = self.head
+        
+        if node is None:
+            node = self.head
+        
         addr = prefix.addr
         bitlen = prefix.bitlen
 
