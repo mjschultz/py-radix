@@ -110,13 +110,14 @@ class Aggradix(object):
             else:
                 node = node.left
 
-    def search_best(self, address, masklen):
+    def search_best(self, address, masklen, node=None):
         '''
         Search Tree and returns best-match node.
 
         Args:
             address (str | bytearray): IPv6 network address to search.
             masklen (int): IPv6 network prefix to search.
+            node (RadixNode): If given, search starts from the node.
         
         Returns:
             RadixNode | None: found node.
@@ -125,7 +126,9 @@ class Aggradix(object):
         if self.head is None:
             return None
 
-        node = self.head
+        if node is None:
+            node = self.head
+        
         addr = prefix.addr
         bitlen = prefix.bitlen
         stack = []
