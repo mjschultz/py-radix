@@ -30,17 +30,17 @@ class Aggradix(object):
         for i in range(self.max_nodes):
             self.cache[i] = RadixNode()
 
-    def _init_head(self, root, bitlen):
+    def _init_head(self, address, prefixlen):
         '''
         Initalize head node with specific address space.
         ex) head node -> 2001:db8::/48
 
         Args:
-            root (str): IPv6 network address.
-            bitlen (int): IPv6 network prefix size. 
+            address (str): IPv6 network address.
+            prefixlen (int): IPv6 network prefix length. 
         '''
         node = RadixNode(node_id=-1)
-        node.set(RadixPrefix(root, bitlen))
+        node.set(RadixPrefix(address, prefixlen))
         self.head = node
 
     def add_count(self, src_addr, dst_addr):
@@ -56,7 +56,7 @@ class Aggradix(object):
         Returns:
             RadixNode: found or inserted node.
         '''
-        node = self.find(dst_addr, 128)
+        node = self.find_or_insert(dst_addr)
 
         if src_addr in node.data:
             node.data[src_addr] += 1
@@ -66,7 +66,7 @@ class Aggradix(object):
 
         return node
 
-    def find(self, address, masklen):
+    def find_or_insert(self, address, prefixlen=128):
         '''
         Search for ${address}/${masklen}.
         If failed, insert a node whose label is ${dst_addr}/${masklen}.
@@ -80,29 +80,29 @@ class Aggradix(object):
             RadixNode: found or inserted node whose label is ${address}/${masklen}.
 
         '''
-        prefix = RadixPrefix(address, masklen)
+        target_prefix = RadixPrefix(address, prefixlen)
 
         # When LRU cahce is full, reclaim nodes to make space for new nodes.
         if self.free_nodes <= 2:
             self.reclaim_node(2)
 
-        addr = prefix.addr
+        addr = target_prefix.addr
         node = self.head
 
         while True:
             # When ${prefix} is not contained in ${node}'s prefix.
-            if not (self.prefix_cmp(node.prefix, prefix)):
-                return self.leaf_alloc(node, prefix)
+            if not (self.prefix_cmp(node.prefix, target_prefix)):
+                return self.leaf_alloc(node, target_prefix)
 
             # When search succeeded.
             ## If ${prefix} is contained in ${node}'s prefix AND prefix sizes are the same,
             ## ${node} is the target.
-            elif (node.prefix.bitlen == prefix.bitlen):
+            elif (node.prefix.bitlen == target_prefix.bitlen):
                 return node
 
             # When we cannot traverse tree more.
             elif (node.right is None):
-                return self.leaf_alloc(node, prefix)
+                return self.leaf_alloc(node, target_prefix)
 
             # When we can traverse tree more.
             if (node.bitlen < self.maxbits and self.addr_test(addr, node.bitlen)):
@@ -110,23 +110,24 @@ class Aggradix(object):
             else:
                 node = node.left
 
-    def search_best(self, address, masklen, node=None):
+    def search_best(self, address, prefixlen, head=None):
         '''
         Search Tree and returns best-match node.
 
         Args:
             address (str | bytearray): IPv6 network address to search.
-            masklen (int): IPv6 network prefix to search.
-            node (RadixNode): If given, search starts from the node.
+            prefixlen (int): IPv6 network prefix to search.
+            head (RadixNode): If given, search starts from the node.
         
         Returns:
             RadixNode | None: found node.
         '''
-        prefix = RadixPrefix(address, masklen)
+        prefix = RadixPrefix(address, prefixlen)
+
         if self.head is None:
             return None
 
-        if node is None:
+        if head is None:
             node = self.head
         
         addr = prefix.addr
@@ -152,18 +153,18 @@ class Aggradix(object):
                return node
         return None
 
-    def search_worst(self, address, masklen):
+    def search_worst(self, address, prefixlen):
         '''
         Search Tree and return worst-match node.
 
         Args:
             address (str | bytearray): IPv6 network address to search.
-            masklen (int): IPv6 network prefix to search.
+            prefixlen (int): IPv6 network prefix to search.
         
         Returns:
             RadixNode | None: found node.
         '''
-        prefix = RadixPrefix(address, masklen)
+        prefix = RadixPrefix(address, prefixlen)
         if self.head is None:
             return None
         node = self.head
@@ -192,7 +193,7 @@ class Aggradix(object):
                 return node
         return None
     
-    def search_covered(self, address, masklen, node=None):
+    def search_covered(self, address, prefixlen, node=None):
         '''
         Search Tree 
         It returns the node which is contained in given prefix AND has shortest prefix.
@@ -215,13 +216,13 @@ class Aggradix(object):
 
         Args:
             address (str | bytearray): IPv6 network address to search.
-            masklen (int): IPv6 network prefix to search.
+            prefixlen (int): IPv6 network prefix to search.
             node (RadixNode): If given, search starts from the node.
         
         Returns:
             RadixNode | None: found node.
         '''
-        prefix = RadixPrefix(address, masklen)
+        prefix = RadixPrefix(address, prefixlen)
         
         if self.head is None:
             return None
@@ -251,6 +252,46 @@ class Aggradix(object):
         for node in stack[::-1]:
             if self.prefix_match(node.prefix, prefix, node.bitlen):
                return node
+        return None
+
+    def search_exact(self, address, prefixlen, head=None):
+        '''
+        Search tree with exact-match.
+
+        Args:
+            address (str | bytearray): IPv6 network address to search.
+            prefixlen (int): IPv6 network prefix to search.
+            head (RadixNode): If given, search starts from the node.
+
+        Returns:
+            RadixNode | None: found node or None.
+        '''
+        target_prefix = RadixPrefix(address, prefixlen)
+        
+        if self.head is None:
+            return None
+
+        if head is None:
+            node = self.head
+
+        target_addr = target_prefix.addr # (bytearray)
+        target_prefixlen = target_prefix.bitlen # (int)
+
+        while node.bitlen < target_prefixlen:
+            # right or left or finish
+            if self.addr_test(target_addr, node.bitlen):
+                node = node.right
+            else:
+                node = node.left
+            if node is None:
+                return None
+
+        if node.bitlen > target_prefixlen:
+            return None
+
+        if self.prefix_match(node.prefix, target_prefix, target_prefixlen):
+            return node
+
         return None
 
     def weighted_count(self, src_address, dst_address, masklen):
