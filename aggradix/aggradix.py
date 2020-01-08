@@ -273,6 +273,8 @@ class Aggradix(object):
 
         if head is None:
             node = self.head
+        else:
+            node = head
 
         target_addr = target_prefix.addr # (bytearray)
         target_prefixlen = target_prefix.bitlen # (int)
