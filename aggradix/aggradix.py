@@ -192,7 +192,36 @@ class Aggradix(object):
             if self.prefix_match(node.prefix, prefix, node.bitlen):
                 return node
         return None
-    
+
+    def search_covered(self, address, prefixlen):
+        prefix = RadixPrefix(address, prefixlen)
+
+        results = []
+        if self.head is None:
+            return results
+        node = self.head
+        addr = prefix.addr
+        bitlen = prefix.bitlen
+
+        while node.bitlen < bitlen:
+            if self.addr_test(addr, node.bitlen):
+                node = node.right
+            else:
+                node = node.left
+            if node is None:
+                return results
+        
+        stack = [node]
+        while stack:
+            node = stack.pop()
+            if self.prefix_match(node.prefix, prefix, prefix.bitlen):
+                results.append(node)
+            if node.right:
+                stack.append(node.right)
+            if node.left:
+                stack.append(node.left)
+        return results
+
     def search_covered_top(self, address, prefixlen, node=None):
         '''
         Search Tree 
