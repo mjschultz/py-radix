@@ -33,7 +33,7 @@ class AggradixTree(RadixTree):
         head = AggradixNode(node_id=-1)
         head.set(RadixPrefix(prefix))
         self.head = head
-        self.maxnode = maxnode - 2
+        self.maxnode = maxnode - 1
         self.free_nodes = self.maxnode
         self.packet_count = 0
         self.nodes = pylru.lrucache(self.maxnode)
@@ -136,10 +136,45 @@ class AggradixTree(RadixTree):
         if node == None:
             return 0
         
-        count = sum(node.data["count"].values())
-        count += self.subtree_sum(node.left)
-        count += self.subtree_sum(node.right)
+        count = sum(node.data.values())
+        count += self._subtree_sum(node.left)
+        count += self._subtree_sum(node.right)
         return count
+
+    def _subtree_merge(self, node, is_root=False):
+        if node is None:
+            return {}
+        
+        data = node.data
+
+        left_data = self._subtree_merge(node.left)
+        for k, v in left_data.items():
+            if k in data.keys():
+                data[k] += v
+            else:
+                data[k] = v
+
+        right_data = self._subtree_merge(node.right)
+        for k, v in right_data.items():
+            if k in data.keys():
+                data[k] += v
+            else:
+                data[k] = v
+        
+        if is_root:
+            node.data = data
+
+        else:
+            if node.parent.left == node:
+                node.parent.left = None
+            else:
+                node.parent.right = None
+            self.free_nodes += 1
+
+            node.reset()
+            self._lru_move_tail(node)
+
+        return data
 
     def _differ_bit(self, addr1, addr2, check_bit = 128):
         '''
@@ -166,15 +201,14 @@ class AggradixTree(RadixTree):
         
         return check_bit if differ_bit > check_bit else differ_bit
 
-    def add(self, _prefix):
+    def add(self, prefix):
         '''
         1. add without using RadixGlue
         2. do not append node under aggregated node
 
         Args:
-            prefix (AggradixNode): prefix to be added
+            prefix (RadixPrefix): prefix to be added
         '''
-        prefix = RadixPrefix(_prefix)
         addr = prefix.addr
         bitlen = prefix.bitlen
 
@@ -205,6 +239,7 @@ class AggradixTree(RadixTree):
 
         new_node = self._lru_get_free()
         new_node.set(prefix)
+        self.free_nodes -= 1            
 
         if node.bitlen == differ_bit:
             new_node.parent = node
@@ -212,7 +247,6 @@ class AggradixTree(RadixTree):
                 node.right = new_node
             else:
                 node.left = new_node
-        
             return new_node
         
         if bitlen == differ_bit:
@@ -235,6 +269,7 @@ class AggradixTree(RadixTree):
         else:
             glue_node = self._lru_get_free()
             glue_node.set(self._common_prefix(node, new_node))
+            self.free_nodes -= 1            
             glue_node.parent = node.parent
 
             if differ_bit < self.maxbits and self._addr_test(addr, differ_bit):
@@ -265,7 +300,7 @@ class AggradixTree(RadixTree):
         while self.free_nodes < 2:
             thr = self.packet_count * 0.3 if self.packet_count > 10 else 10
 
-            leaf = self.lru_get_active()
+            leaf = self._lru_get_active()
             
             if sum(leaf.data.values()) > thr and loopcount < 10:
                 self.nodes[leaf.node_id] = leaf
@@ -286,26 +321,45 @@ class AggradixTree(RadixTree):
                 loopcount += 1
                 continue
             elif need_sibling:
-                self._leaf_free(leaf)
+                self._leaf_free(leaf, is_root=True)
             else:
-                self._subtree_merge(leaf.parent)
+                self._subtree_merge(leaf.parent, is_root=True)
+
+    def add_count(self, dst_addr, src_addr):
+        if self.free_nodes < 2:
+            self.aggregate()
+        
+        dst_prefix = RadixPrefix(f'{dst_addr}/128')
+        node = self.add(dst_prefix)
+        if src_addr in node.data.keys():
+            node.data[src_addr] += 1
+        else:
+            node.data[src_addr] = 1
 
     def cat_tree(self, head = None):
+        print("**** aggradix dump ****")
+        print(f'freenode: {self.free_nodes}\n')
         if head is None:
             head = self.head
         
-        stack = [head]
+        stack = [(head, 0)]
         while len(stack) > 0:
-            node = stack.pop()
-            print(node.prefix, node.data)
+            node, depth = stack.pop()
+            print(f'{"-"*depth*2} {node.prefix} -> {node.data}')
             if (node.left is not None):
-                stack.append(node.left)
+                stack.append((node.left, depth+1))
             if (node.right is not None):
-                stack.append(node.right)        
+                stack.append((node.right, depth+1))
+        print("**** dump fin ****\n")
 
 if __name__ == "__main__":
-    aggradix = AggradixTree("2001:db8::/48")
-    aggradix.add("2001:db8::/128")
-    aggradix.add("2001:db8:0:8000::/128")
-    aggradix.add("2001:db8:0::200/128")
-    aggradix.cat_tree()
+    import ipaddress, random
+
+    aggradix = AggradixTree("2001:db8::/48", maxnode=8)
+    src_addresses = ["2001:db8:f::1", "2001:db8:f::1234"]
+    
+    base = ipaddress.ip_address("2001:db8::")
+    for i in range(8):
+        dst_addr = base + random.randint(0, 2**(128-48))
+        aggradix.add_count(str(dst_addr), src_addresses[i%2])
+        aggradix.cat_tree()
