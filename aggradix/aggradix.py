@@ -15,13 +15,14 @@ class AggradixNode(RadixNode):
     def set(self, prefix):
         self.prefix = prefix
         self.bitlen = prefix.bitlen
+        self.data = {"respond_addr": {}}
         self.free = False
 
     def reset(self):
         self.prefix = None
         self.left = None
         self.right = None
-        self.data = {}
+        self.data = {"respond_addr": {}}
         self.free = True
     
     def __str__(self):
@@ -136,30 +137,30 @@ class AggradixTree(RadixTree):
         if node == None:
             return 0
         
-        count = sum(node.data.values())
+        count = sum(node.data["respond_addr"].values())
         count += self._subtree_sum(node.left)
         count += self._subtree_sum(node.right)
         return count
 
     def _subtree_merge(self, node, is_root=False):
         if node is None:
-            return {}
+            return {"respond_addr": {}}
         
         data = node.data
 
         left_data = self._subtree_merge(node.left)
-        for k, v in left_data.items():
+        for k, v in left_data["respond_addr"].items():
             if k in data.keys():
-                data[k] += v
+                data["respond_addr"][k] += v
             else:
-                data[k] = v
+                data["respond_addr"][k] = v
 
         right_data = self._subtree_merge(node.right)
-        for k, v in right_data.items():
+        for k, v in right_data["respond_addr"].items():
             if k in data.keys():
-                data[k] += v
+                data["respond_addr"][k] += v
             else:
-                data[k] = v
+                data["respond_addr"][k] = v
         
         if is_root:
             node.data = data
@@ -302,7 +303,7 @@ class AggradixTree(RadixTree):
 
             leaf = self._lru_get_active()
             
-            if sum(leaf.data.values()) > thr and loopcount < 10:
+            if sum(leaf.data["respond_addr"].values()) > thr and loopcount < 10:
                 self.nodes[leaf.node_id] = leaf
                 loopcount += 1
                 continue
@@ -311,7 +312,7 @@ class AggradixTree(RadixTree):
             sibling = parent.right if parent.left == leaf else parent.left
 
             sibling_count = self._subtree_sum(sibling)
-            parent_count = sum(parent.data.values())
+            parent_count = sum(parent.data["respond_addr"].values())
 
             need_sibling = sibling_count > thr
             need_parent = (parent == self.head) or (parent_count > thr)
@@ -324,6 +325,7 @@ class AggradixTree(RadixTree):
                 self._leaf_free(leaf, is_root=True)
             else:
                 self._subtree_merge(leaf.parent, is_root=True)
+                leaf.parent.data["aggregated"] = True
 
     def add_count(self, dst_addr, src_addr):
         if self.free_nodes < 2:
@@ -331,10 +333,10 @@ class AggradixTree(RadixTree):
         
         dst_prefix = RadixPrefix(f'{dst_addr}/128')
         node = self.add(dst_prefix)
-        if src_addr in node.data.keys():
-            node.data[src_addr] += 1
+        if src_addr in node.data["respond_addr"].keys():
+            node.data["respond_addr"][src_addr] += 1
         else:
-            node.data[src_addr] = 1
+            node.data["respond_addr"][src_addr] = 1
 
     def cat_tree(self, head = None):
         print("**** aggradix dump ****")
@@ -345,7 +347,8 @@ class AggradixTree(RadixTree):
         stack = [(head, 0)]
         while len(stack) > 0:
             node, depth = stack.pop()
-            print(f'{"-"*depth*2} {node.prefix} -> {node.data}')
+            aggregated_mark = "*" if "aggregated" in node.data.keys() else " "
+            print(f'{"-"*depth*2} {aggregated_mark} {node.prefix} -> {node.data["respond_addr"]}')
             if (node.left is not None):
                 stack.append((node.left, depth+1))
             if (node.right is not None):
