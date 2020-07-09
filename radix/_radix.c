@@ -50,8 +50,6 @@ PyObject *radix_constructor;
 typedef struct {
         PyObject_HEAD
         PyObject *user_attr;    /* User-specified attributes */
-        PyObject *network;
-        PyObject *prefix;
         PyObject *prefixlen;
         PyObject *family;
         PyObject *packed;
@@ -64,7 +62,6 @@ static RadixNodeObject *
 newRadixNodeObject(radix_node_t *rn)
 {
         RadixNodeObject *self;
-        char network[256], prefix[256];
 
         /* Sanity check */
         if (rn == NULL || rn->prefix == NULL || 
@@ -77,24 +74,16 @@ newRadixNodeObject(radix_node_t *rn)
 
         self->rn = rn;
 
-        /* Format addresses for packing into objects */
-        prefix_addr_ntop(rn->prefix, network, sizeof(network));
-        prefix_ntop(rn->prefix, prefix, sizeof(prefix));
-
-        self->user_attr = PyDict_New();
-        self->network = PyString_FromString(network);
-        self->prefix = PyString_FromString(prefix);
+        self->user_attr = NULL;
         self->prefixlen = PyInt_FromLong(rn->prefix->bitlen);
         self->family = PyInt_FromLong(rn->prefix->family);
         self->packed = PyString_FromStringAndSize((char*)&rn->prefix->add,
             rn->prefix->family == AF_INET ? 4 : 16);
 
-        if (self->user_attr == NULL || self->prefixlen == NULL || 
-            self->family == NULL || self->network == NULL || 
-            self->prefix == NULL) {
-                /* RadixNode_dealloc will clean up for us */
-                Py_XDECREF(self);
-                return (NULL);          
+        if (self->family == NULL || self->prefixlen == NULL) {
+            /* RadixNode_dealloc will clean up for us */
+            Py_XDECREF(self);
+            return (NULL);
         }
 
         return self;
@@ -108,8 +97,6 @@ RadixNode_dealloc(RadixNodeObject *self)
         Py_XDECREF(self->user_attr);
         Py_XDECREF(self->prefixlen);
         Py_XDECREF(self->family);
-        Py_XDECREF(self->network);
-        Py_XDECREF(self->prefix);
         Py_XDECREF(self->packed);
         PyObject_Del(self);
 }
@@ -139,9 +126,7 @@ Radix_parent(RadixNodeObject *self, void *closure)
         Py_RETURN_NONE;
 }
 static PyMemberDef RadixNode_members[] = {
-        {"data",        T_OBJECT, offsetof(RadixNodeObject, user_attr), READONLY},
-        {"network",     T_OBJECT, offsetof(RadixNodeObject, network),   READONLY},
-        {"prefix",      T_OBJECT, offsetof(RadixNodeObject, prefix),    READONLY},
+        {"data",        T_OBJECT, offsetof(RadixNodeObject, user_attr), 0},
         {"prefixlen",   T_OBJECT, offsetof(RadixNodeObject, prefixlen), READONLY},
         {"family",      T_OBJECT, offsetof(RadixNodeObject, family),    READONLY},
         {"packed",      T_OBJECT, offsetof(RadixNodeObject, packed),    READONLY},
@@ -524,7 +509,7 @@ add_node_to_list(radix_node_t *node, void *arg)
         PyObject *ret = arg;
 
         if (node->data != NULL)
-                PyList_Append(ret, ((RadixNodeObject *)node->data));
+                PyList_Append(ret, (PyObject *)((RadixNodeObject *)node->data));
         return (0);
 }
 
@@ -643,8 +628,11 @@ Radix_prefixes(RadixObject *self, PyObject *args)
 
         RADIX_TREE_WALK(self->rt, node) {
                 if (node->data != NULL) {
-                        PyList_Append(ret,
-                            ((RadixNodeObject *)node->data)->prefix);
+                        char buf[256];
+                        PyObject *prefix = PyString_FromString(
+                                prefix_ntop(node->prefix, buf, sizeof(buf))
+                        );
+                        PyList_Append(ret, prefix);
                 }
         } RADIX_TREE_WALK_END;
 
