@@ -22,25 +22,13 @@ import radix
 import socket
 import struct
 import sys
-if sys.version_info < (2, 7):
-    import unittest2 as unittest
-else:
-    import unittest
+import unittest
 
-if sys.version_info < (3, 2):
-    # for 2.x
-    import cPickle
-    t14_packed_addr = '\xe0\x14\x0b@'
-    t15_packed_addr = ('\xde\xad\xbe\xef\x124Vx'
-                       '\x9a\xbc\xde\xf0\x00\x00\x00\x00')
-    range = xrange
-else:
-    # for Py3K
-    t14_packed_addr = struct.pack('4B', 0xe0, 0x14, 0x0b, 0x40)
-    t15_packed_addr = struct.pack(
-        '16B',
-        0xde, 0xad, 0xbe, 0xef, 0x12, 0x34, 0x56, 0x78,
-        0x9a, 0xbc, 0xde, 0xf0, 0x00, 0x00, 0x00, 0x00)
+t14_packed_addr = struct.pack('4B', 0xe0, 0x14, 0x0b, 0x40)
+t15_packed_addr = struct.pack(
+    '16B',
+    0xde, 0xad, 0xbe, 0xef, 0x12, 0x34, 0x56, 0x78,
+    0x9a, 0xbc, 0xde, 0xf0, 0x00, 0x00, 0x00, 0x00)
 
 
 class TestRadix(unittest.TestCase):
@@ -359,33 +347,6 @@ class TestRadix(unittest.TestCase):
                 node.data["j"] = j
         self.assertEquals(len(tree2.nodes()), num_nodes_in)
 
-    def test_21__cpickle(self):
-        if sys.version_info[0] >= 3:
-            return
-        tree = radix.Radix()
-        num_nodes_in = 0
-        for i in range(0, 128):
-            for j in range(0, 128):
-                k = ((i + j) % 8) + 24
-                addr = "1.%d.%d.0" % (i, j)
-                node = tree.add(addr, k)
-                node.data["i"] = i
-                node.data["j"] = j
-                num_nodes_in += 1
-        tree_pickled = cPickle.dumps(tree)
-        del tree
-        tree2 = cPickle.loads(tree_pickled)
-        for i in range(0, 128):
-            for j in range(0, 128):
-                k = ((i + j) % 8) + 24
-                addr = "1.%d.%d.0" % (i, j)
-                node = tree2.search_exact(addr, k)
-                self.assertNotEquals(node, None)
-                self.assertEquals(node.data["i"], i)
-                self.assertEquals(node.data["j"], j)
-                node.data["j"] = j
-        self.assertEquals(len(tree2.nodes()), num_nodes_in)
-
     def test_22_search_best(self):
         tree = radix.Radix()
         tree.add('10.0.0.0/8')
@@ -534,6 +495,7 @@ class TestRadix(unittest.TestCase):
 
 def main():
     unittest.main()
+
 
 if __name__ == '__main__':
     main()
