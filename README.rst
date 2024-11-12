@@ -1,8 +1,8 @@
 py-radix
 ========
 
-.. image:: https://travis-ci.org/mjschultz/py-radix.svg?branch=master
-   :target: https://travis-ci.org/mjschultz/py-radix
+.. image:: https://github.com/mjschultz/py-radix/actions/workflows/python-package.yml/badge.svg
+   :target: https://github.com/mjschultz/py-radix/actions/workflows/python-package.yml
 
 .. image:: https://coveralls.io/repos/mjschultz/py-radix/badge.png?branch=master
    :target: https://coveralls.io/r/mjschultz/py-radix?branch=master
