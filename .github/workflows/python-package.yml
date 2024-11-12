@@ -52,7 +52,9 @@ jobs:
       run: |
         # Stop the build if there are Python syntax errors or undefined names
         flake8 . --count --select=E9,F63,F7,F82 --show-source --statistics
-        # For now, treat all errors as warnings using --exit-zero
-        flake8 . --count --exit-zero --max-complexity=10 --max-line-length=127 --statistics
+        # For now, ignore the single occurrence of E741 in _prefix_match(),
+        # ignore W503 in favor of PEP 8 suggesting Knuth's style, accept the
+        # max. complexity of 23 for RadixTree.add() - and just fail otherwise
+        flake8 . --count --ignore=E741,W503 --max-complexity=23 --max-line-length=127 --statistics
     - name: Test with pytest
       run: pytest

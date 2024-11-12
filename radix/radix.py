@@ -122,8 +122,8 @@ class RadixTree(object):
         node = self.head
         # find the best place for the node
         while node.bitlen < bitlen or node._prefix.addr is None:
-            if (node.bitlen < self.maxbits and
-                    self._addr_test(addr, node.bitlen)):
+            if (node.bitlen < self.maxbits
+                    and self._addr_test(addr, node.bitlen)):
                 if node.right is None:
                     break
                 node = node.right
@@ -165,8 +165,8 @@ class RadixTree(object):
         # fix it up
         if node.bitlen == differ_bit:
             new_node.parent = node
-            if (node.bitlen < self.maxbits and
-                    self._addr_test(addr, node.bitlen)):
+            if (node.bitlen < self.maxbits
+                    and self._addr_test(addr, node.bitlen)):
                 node.right = new_node
             else:
                 node.left = new_node
@@ -272,8 +272,8 @@ class RadixTree(object):
         if len(stack) <= 0:
             return None
         for node in stack[::-1]:
-            if (self._prefix_match(node._prefix, prefix, node.bitlen) and
-                    node.bitlen <= bitlen):
+            if (self._prefix_match(node._prefix, prefix, node.bitlen)
+                    and node.bitlen <= bitlen):
                 return node
         return None
 
