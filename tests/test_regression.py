@@ -450,17 +450,17 @@ class TestRadix(unittest.TestCase):
         tree.add('3.178.157.0/24')
 
         self.assertEqual([n.prefix for n in
-                           tree.search_covering('8.9.0.1/32')],
-                          ['8.9.0.1/32', '8.9.0.0/16', '0.0.0.0/2'])
+                          tree.search_covering('8.9.0.1/32')],
+                         ['8.9.0.1/32', '8.9.0.0/16', '0.0.0.0/2'])
         self.assertEqual([n.prefix for n in
-                           tree.search_covering('5.5.5.0/24')],
-                          ['0.0.0.0/2'])
+                          tree.search_covering('5.5.5.0/24')],
+                         ['0.0.0.0/2'])
         self.assertEqual([n.prefix for n in
-                           tree.search_covering('3.178.152.0/21')],
-                          ['0.0.0.0/2'])
+                          tree.search_covering('3.178.152.0/21')],
+                         ['0.0.0.0/2'])
         self.assertEqual([n.prefix for n in
-                           tree.search_covering('205.0.1.0/24')],
-                          [])
+                          tree.search_covering('205.0.1.0/24')],
+                         [])
 
     def test_30_remove(self):
         # https://github.com/mjschultz/py-radix/issues/17
