@@ -525,7 +525,7 @@ add_node_to_list(radix_node_t *node, void *arg)
         PyObject *ret = arg;
 
         if (node->data != NULL)
-                PyList_Append(ret, ((RadixNodeObject *)node->data));
+                PyList_Append(ret, ((PyObject *)node->data));
         return (0);
 }
 
