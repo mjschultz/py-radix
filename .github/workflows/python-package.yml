@@ -6,10 +6,10 @@ name: Python package
 on:
   push:
     branches:
-    - master
+    - main
   pull_request:
     branches:
-    - master
+    - main
   workflow_dispatch:
 
 jobs:
@@ -18,12 +18,12 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        os: [ubuntu-20.04, ubuntu-latest]
-        python-version: ["3.6", "3.7", "3.8", "3.9", "3.10", "3.11", "3.12", "3.13"]
+        os: [ubuntu-20.04, ubuntu-24.04]
+        python-version: ['3.6', '3.7', '3.8', '3.9', '3.10', '3.11', '3.12', '3.13', '3.14.0-alpha.1', 'pypy3.9', 'pypy3.10']
         exclude:
-        - os: ubuntu-latest
+        - os: ubuntu-24.04
           python-version: 3.6
-        - os: ubuntu-20.04
+        - os: ubuntu-24.04
           python-version: 3.7
         - os: ubuntu-20.04
           python-version: 3.8
@@ -37,6 +37,12 @@ jobs:
           python-version: 3.12
         - os: ubuntu-20.04
           python-version: 3.13
+        - os: ubuntu-20.04
+          python-version: 3.14.0-alpha.1
+        - os: ubuntu-20.04
+          python-version: pypy3.9
+        - os: ubuntu-20.04
+          python-version: pypy3.10
     steps:
     - uses: actions/checkout@v4
     - name: Set up Python ${{ matrix.python-version }}
@@ -55,4 +61,4 @@ jobs:
         # For now, treat all errors as warnings using --exit-zero
         flake8 . --count --exit-zero --max-complexity=10 --max-line-length=127 --statistics
     - name: Test with pytest
-      run: pytest
+      run: pytest -v
