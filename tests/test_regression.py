@@ -44,7 +44,7 @@ class TestRadix(unittest.TestCase):
         # it takes a number of tries to cause a problem, so this is more of a
         # smoke test
         curr_refs = sys.getrefcount(None)
-        for __ in range(curr_refs+1):
+        for __ in range(curr_refs + 1):
             self.assertEqual(type(None), type(node.parent))
 
     def test_00__create_destroy(self):

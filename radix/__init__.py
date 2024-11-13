@@ -1,6 +1,6 @@
 try:
     from ._radix import Radix as _Radix
-except Exception as e:
+except Exception:
     from .radix import Radix as _Radix
 
 __version__ = '0.10.0'
