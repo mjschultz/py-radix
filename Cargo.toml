@@ -1,0 +1,30 @@
+[package]
+name = "py-radix-rs"
+version = "0.10.0"
+edition = "2021"
+rust-version = "1.63"
+description = "Fast radix tree implementation for IPv4 and IPv6 network prefixes"
+homepage = "https://github.com/mjschultz/py-radix"
+repository = "https://github.com/mjschultz/py-radix"
+license = "BSD-3-Clause"
+authors = ["Michael J. Schultz <mjschultz@gmail.com>"]
+keywords = ["radix", "tree", "trie", "networking", "routing"]
+categories = ["network-programming", "data-structures"]
+
+[lib]
+name = "py_radix_rs"
+crate-type = ["cdylib"]
+
+[dependencies]
+pyo3 = { version = "0.25", features = ["extension-module"] }
+ipnetwork = "0.21"
+serde = { version = "1.0", features = ["derive"] }
+
+[profile.release]
+lto = true
+codegen-units = 1
+strip = true
+
+[profile.dev]
+opt-level = 0
+debug = true
