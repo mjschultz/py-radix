@@ -136,8 +136,14 @@ impl RadixTree {
     ) -> PyResult<Option<RadixNode>> {
         let addr = match (network, packed) {
             (Some(net), None) => {
-                IpAddr::from_str(&net)
-                    .map_err(|e| PyValueError::new_err(format!("Invalid IP address: {}", e)))?
+                // Try to parse as CIDR first, then as IP address
+                if net.contains('/') {
+                    let prefix = Prefix::from_str(&net)?;
+                    prefix.network_addr()
+                } else {
+                    IpAddr::from_str(&net)
+                        .map_err(|e| PyValueError::new_err(format!("Invalid IP address: {}", e)))?
+                }
             }
             (None, Some(packed_addr)) => {
                 match packed_addr.len() {
@@ -183,8 +189,14 @@ impl RadixTree {
     ) -> PyResult<Option<RadixNode>> {
         let addr = match (network, packed) {
             (Some(net), None) => {
-                IpAddr::from_str(&net)
-                    .map_err(|e| PyValueError::new_err(format!("Invalid IP address: {}", e)))?
+                // Try to parse as CIDR first, then as IP address
+                if net.contains('/') {
+                    let prefix = Prefix::from_str(&net)?;
+                    prefix.network_addr()
+                } else {
+                    IpAddr::from_str(&net)
+                        .map_err(|e| PyValueError::new_err(format!("Invalid IP address: {}", e)))?
+                }
             }
             (None, Some(packed_addr)) => {
                 match packed_addr.len() {

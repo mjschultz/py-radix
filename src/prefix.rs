@@ -34,7 +34,14 @@ impl Prefix {
                 .map_err(|e| PyValueError::new_err(format!("Invalid prefix length: {}", e)))?;
             Self::new(addr, prefix_len)
         } else {
-            Err(PyValueError::new_err("Invalid CIDR format"))
+            // No slash found - treat as host route
+            let addr = IpAddr::from_str(s)
+                .map_err(|e| PyValueError::new_err(format!("Invalid IP address: {}", e)))?;
+            let prefix_len = match addr {
+                IpAddr::V4(_) => 32,
+                IpAddr::V6(_) => 128,
+            };
+            Self::new(addr, prefix_len)
         }
     }
     

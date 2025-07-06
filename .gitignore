@@ -186,5 +186,3 @@ target/
 .claude/settings.local.json
 CLAUDE.md
 
-# Test files (temporary)
-test_basic.py
