@@ -1,18 +1,18 @@
 use pyo3::prelude::*;
 use pyo3::types::PyDict;
-use std::collections::HashMap;
 use crate::prefix::Prefix;
 
 #[pyclass]
 pub struct RadixNode {
     pub(crate) prefix: Prefix,
-    pub(crate) data: HashMap<String, PyObject>,
+    pub(crate) data: Py<PyDict>,
+    pub(crate) parent: Option<Py<RadixNode>>,
 }
 
 #[pymethods]
 impl RadixNode {
     #[new]
-    fn new(_py: Python, network: String, masklen: Option<u8>) -> PyResult<Self> {
+    fn new(py: Python, network: String, masklen: Option<u8>) -> PyResult<Self> {
         let prefix = match masklen {
             Some(mask) => Prefix::from_network_masklen(&network, mask)?,
             None => Prefix::from_str(&network)?,
@@ -20,7 +20,8 @@ impl RadixNode {
         
         Ok(RadixNode {
             prefix,
-            data: HashMap::new(),
+            data: PyDict::new(py).into(),
+            parent: None,
         })
     }
     
@@ -51,21 +52,13 @@ impl RadixNode {
     
     #[getter]
     fn data(&self, py: Python) -> PyResult<PyObject> {
-        let dict = PyDict::new(py);
-        for (key, value) in &self.data {
-            dict.set_item(key, value)?;
-        }
-        Ok(dict.into())
+        Ok(self.data.clone_ref(py).into())
     }
     
     #[setter]
     fn set_data(&mut self, py: Python, value: PyObject) -> PyResult<()> {
         let dict = value.downcast_bound::<PyDict>(py)?;
-        self.data.clear();
-        for (key, val) in dict.iter() {
-            let key_str = key.extract::<String>()?;
-            self.data.insert(key_str, val.into());
-        }
+        self.data = dict.clone().into();
         Ok(())
     }
     
@@ -76,28 +69,43 @@ impl RadixNode {
     fn __repr__(&self) -> String {
         format!("RadixNode({})", self.prefix.prefix())
     }
+    
+    #[getter]
+    fn parent(&self, py: Python) -> PyResult<PyObject> {
+        match &self.parent {
+            Some(parent) => Ok(parent.clone_ref(py).into()),
+            None => Ok(py.None()),
+        }
+    }
 }
 
 impl RadixNode {
-    pub fn new_with_prefix(prefix: Prefix) -> Self {
+    pub fn new_with_prefix(py: Python, prefix: Prefix) -> Self {
         RadixNode {
             prefix,
-            data: HashMap::new(),
+            data: PyDict::new(py).into(),
+            parent: None,
         }
     }
     
-    pub fn set_data_item(&mut self, key: String, value: PyObject) {
-        self.data.insert(key, value);
+    pub fn set_data_item(&self, py: Python, key: String, value: PyObject) -> PyResult<()> {
+        self.data.bind(py).set_item(key, value)
     }
     
-    pub fn get_data_item(&self, key: &str) -> Option<&PyObject> {
-        self.data.get(key)
+    pub fn get_data_item(&self, py: Python, key: &str) -> PyResult<Option<PyObject>> {
+        match self.data.bind(py).get_item(key) {
+            Ok(Some(value)) => Ok(Some(value.into())),
+            Ok(None) => Ok(None),
+            Err(e) => Err(e),
+        }
     }
     
-    pub fn clone_for_return(&self) -> Self {
+    pub fn clone_for_return(&self, py: Python) -> Self {
         RadixNode {
             prefix: self.prefix.clone(),
-            data: HashMap::new(), // We'll handle data cloning differently
+            data: self.data.clone_ref(py),
+            parent: None,
         }
     }
+    
 }
