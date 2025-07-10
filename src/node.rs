@@ -79,6 +79,7 @@ impl RadixNode {
     }
 }
 
+
 impl RadixNode {
     pub fn new_with_prefix(py: Python, prefix: Prefix) -> Self {
         RadixNode {

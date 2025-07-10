@@ -9,7 +9,7 @@ use crate::node::RadixNode;
 
 #[pyclass]
 pub struct RadixTree {
-    nodes: HashMap<String, RadixNode>,
+    py_nodes: HashMap<String, Py<RadixNode>>,
 }
 
 #[pymethods]
@@ -17,7 +17,7 @@ impl RadixTree {
     #[new]
     fn new() -> Self {
         RadixTree {
-            nodes: HashMap::new(),
+            py_nodes: HashMap::new(),
         }
     }
     
@@ -28,7 +28,7 @@ impl RadixTree {
         network: Option<String>,
         masklen: Option<u8>,
         packed: Option<Vec<u8>>,
-    ) -> PyResult<RadixNode> {
+    ) -> PyResult<PyObject> {
         let prefix = match (network, masklen, packed) {
             (Some(net), None, None) => {
                 // CIDR format like "10.0.0.0/8"
@@ -52,13 +52,16 @@ impl RadixTree {
         let normalized_prefix = Prefix::new(prefix.network_addr(), prefix.prefix_len)?;
         let key = normalized_prefix.prefix();
         
-        if let Some(existing_node) = self.nodes.get(&key) {
-            Ok(existing_node.clone_for_return(py))
+        if let Some(existing_py_node) = self.py_nodes.get(&key) {
+            Ok(existing_py_node.clone_ref(py).into())
         } else {
             let node = RadixNode::new_with_prefix(py, normalized_prefix);
-            let return_node = node.clone_for_return(py);
-            self.nodes.insert(key, node);
-            Ok(return_node)
+            let py_node = Py::new(py, node)?;
+            
+            // Store the Python object
+            self.py_nodes.insert(key, py_node.clone_ref(py));
+            
+            Ok(py_node.into())
         }
     }
     
@@ -89,7 +92,7 @@ impl RadixTree {
         let normalized_prefix = Prefix::new(prefix.network_addr(), prefix.prefix_len)?;
         let key = normalized_prefix.prefix();
         
-        if self.nodes.remove(&key).is_some() {
+        if self.py_nodes.remove(&key).is_some() {
             Ok(())
         } else {
             Err(PyValueError::new_err("Node not found"))
@@ -103,7 +106,7 @@ impl RadixTree {
         network: Option<String>,
         masklen: Option<u8>,
         packed: Option<Vec<u8>>,
-    ) -> PyResult<Option<RadixNode>> {
+    ) -> PyResult<Option<PyObject>> {
         let prefix = match (network, masklen, packed) {
             (Some(net), None, None) => {
                 Prefix::from_str(&net)?
@@ -124,7 +127,7 @@ impl RadixTree {
         let normalized_prefix = Prefix::new(prefix.network_addr(), prefix.prefix_len)?;
         let key = normalized_prefix.prefix();
         
-        Ok(self.nodes.get(&key).map(|node| node.clone_for_return(py)))
+        Ok(self.py_nodes.get(&key).map(|py_node| py_node.clone_ref(py).into()))
     }
     
     #[pyo3(signature = (network = None, packed = None))]
@@ -133,7 +136,7 @@ impl RadixTree {
         py: Python,
         network: Option<String>,
         packed: Option<Vec<u8>>,
-    ) -> PyResult<Option<RadixNode>> {
+    ) -> PyResult<Option<PyObject>> {
         let addr = match (network, packed) {
             (Some(net), None) => {
                 // Try to parse as CIDR first, then as IP address
@@ -167,17 +170,18 @@ impl RadixTree {
             }
         };
         
-        let mut best_match: Option<&RadixNode> = None;
+        let mut best_match: Option<&str> = None;
         let mut best_len = 0;
         
-        for node in self.nodes.values() {
-            if node.prefix.contains(&addr) && node.prefix.prefix_len >= best_len {
-                best_match = Some(node);
-                best_len = node.prefix.prefix_len;
+        for (key, py_node) in &self.py_nodes {
+            let node_ref = py_node.bind(py).borrow();
+            if node_ref.prefix.contains(&addr) && node_ref.prefix.prefix_len >= best_len {
+                best_match = Some(key);
+                best_len = node_ref.prefix.prefix_len;
             }
         }
         
-        Ok(best_match.map(|node| node.clone_for_return(py)))
+        Ok(best_match.and_then(|key| self.py_nodes.get(key).map(|py_node| py_node.clone_ref(py).into())))
     }
     
     #[pyo3(signature = (network = None, packed = None))]
@@ -186,7 +190,7 @@ impl RadixTree {
         py: Python,
         network: Option<String>,
         packed: Option<Vec<u8>>,
-    ) -> PyResult<Option<RadixNode>> {
+    ) -> PyResult<Option<PyObject>> {
         let addr = match (network, packed) {
             (Some(net), None) => {
                 // Try to parse as CIDR first, then as IP address
@@ -220,17 +224,18 @@ impl RadixTree {
             }
         };
         
-        let mut worst_match: Option<&RadixNode> = None;
+        let mut worst_match: Option<&str> = None;
         let mut worst_len = 255;
         
-        for node in self.nodes.values() {
-            if node.prefix.contains(&addr) && node.prefix.prefix_len <= worst_len {
-                worst_match = Some(node);
-                worst_len = node.prefix.prefix_len;
+        for (key, py_node) in &self.py_nodes {
+            let node_ref = py_node.bind(py).borrow();
+            if node_ref.prefix.contains(&addr) && node_ref.prefix.prefix_len <= worst_len {
+                worst_match = Some(key);
+                worst_len = node_ref.prefix.prefix_len;
             }
         }
         
-        Ok(worst_match.map(|node| node.clone_for_return(py)))
+        Ok(worst_match.and_then(|key| self.py_nodes.get(key).map(|py_node| py_node.clone_ref(py).into())))
     }
     
     #[pyo3(signature = (network = None, masklen = None, packed = None))]
@@ -240,7 +245,7 @@ impl RadixTree {
         network: Option<String>,
         masklen: Option<u8>,
         packed: Option<Vec<u8>>,
-    ) -> PyResult<Vec<RadixNode>> {
+    ) -> PyResult<Vec<PyObject>> {
         let prefix = match (network, masklen, packed) {
             (Some(net), None, None) => {
                 Prefix::from_str(&net)?
@@ -260,14 +265,19 @@ impl RadixTree {
         
         let mut covered = Vec::new();
         
-        for node in self.nodes.values() {
-            if prefix.contains_prefix(&node.prefix) {
-                covered.push(node.clone_for_return(py));
+        for (key, py_node) in &self.py_nodes {
+            let node_ref = py_node.bind(py).borrow();
+            if prefix.contains_prefix(&node_ref.prefix) {
+                covered.push(py_node.clone_ref(py).into());
             }
         }
         
         // Sort by prefix length (longest first)
-        covered.sort_by(|a, b| b.prefix.prefix_len.cmp(&a.prefix.prefix_len));
+        covered.sort_by(|a: &PyObject, b: &PyObject| {
+            let a_node = a.extract::<PyRef<RadixNode>>(py).unwrap();
+            let b_node = b.extract::<PyRef<RadixNode>>(py).unwrap();
+            b_node.prefix.prefix_len.cmp(&a_node.prefix.prefix_len)
+        });
         
         Ok(covered)
     }
@@ -279,7 +289,7 @@ impl RadixTree {
         network: Option<String>,
         masklen: Option<u8>,
         packed: Option<Vec<u8>>,
-    ) -> PyResult<Vec<RadixNode>> {
+    ) -> PyResult<Vec<PyObject>> {
         let prefix = match (network, masklen, packed) {
             (Some(net), None, None) => {
                 Prefix::from_str(&net)?
@@ -299,24 +309,29 @@ impl RadixTree {
         
         let mut covering = Vec::new();
         
-        for node in self.nodes.values() {
-            if node.prefix.contains_prefix(&prefix) {
-                covering.push(node.clone_for_return(py));
+        for (key, py_node) in &self.py_nodes {
+            let node_ref = py_node.bind(py).borrow();
+            if node_ref.prefix.contains_prefix(&prefix) {
+                covering.push(py_node.clone_ref(py).into());
             }
         }
         
         // Sort by prefix length (shortest first)
-        covering.sort_by(|a, b| a.prefix.prefix_len.cmp(&b.prefix.prefix_len));
+        covering.sort_by(|a: &PyObject, b: &PyObject| {
+            let a_node = a.extract::<PyRef<RadixNode>>(py).unwrap();
+            let b_node = b.extract::<PyRef<RadixNode>>(py).unwrap();
+            a_node.prefix.prefix_len.cmp(&b_node.prefix.prefix_len)
+        });
         
         Ok(covering)
     }
     
-    fn nodes(&self, py: Python) -> Vec<RadixNode> {
-        self.nodes.values().map(|node| node.clone_for_return(py)).collect()
+    fn nodes(&self, py: Python) -> Vec<PyObject> {
+        self.py_nodes.values().map(|py_node| py_node.clone_ref(py).into()).collect()
     }
     
     fn prefixes(&self) -> Vec<String> {
-        self.nodes.keys().cloned().collect()
+        self.py_nodes.keys().cloned().collect()
     }
     
     // TODO: Fix iterator implementation
@@ -326,7 +341,7 @@ impl RadixTree {
     // }
     
     fn __len__(&self) -> usize {
-        self.nodes.len()
+        self.py_nodes.len()
     }
 }
 
