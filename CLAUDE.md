@@ -48,21 +48,28 @@ py-radix-rs is a complete Rust rewrite of the py-radix library, providing a high
 - ✅ Python 3.8-3.13 compatibility matrix
 - ✅ Performance benchmarking in CI
 
-### 🔄 **Known Limitations**
+### ✅ **Recently Fixed (January 2025)**
 
-**Object Identity Issues:**
-- Search methods return new objects instead of same instances
-- Tests expecting `search_exact(prefix) is original_node` fail
-- Would require major architectural changes to fix
+**Object Identity Issues - SOLVED:**
+- ✅ Search methods now return same object instances consistently
+- ✅ Tests expecting `search_exact(prefix) is original_node` now pass
+- ✅ Fixed through major architectural redesign using Py<RadixNode> caching
+
+**CIDR Search Semantics - SOLVED:**
+- ✅ search_best/search_worst now handle CIDR notation correctly
+- ✅ Distinguishes between address search vs prefix search properly
+- ✅ Matches original implementation behavior exactly
+
+**Input Validation - SOLVED:**
+- ✅ Negative mask lengths now throw ValueError instead of OverflowError
+- ✅ Proper range validation for all prefix length inputs
+
+### 🔄 **Remaining Limitations**
 
 **Missing Features:**
 - ❌ Iterator implementation (temporarily disabled)
-- ❌ Pickle serialization support
-- ❌ Proper parent-child tree relationships (parents not set correctly)
-
-**CIDR Search Semantics:**
-- Some edge cases in search_best/search_worst with CIDR notation
-- May not match original implementation behavior exactly
+- ❌ Pickle serialization support  
+- ❌ Proper parent-child tree relationships (parents always None)
 
 ### 📊 **Performance Results**
 
@@ -144,20 +151,25 @@ git push origin rust-rewrite
 - test_07__nodes - Node enumeration
 - test_09__prefixes - Prefix listing
 
-### ⚠️ **Failing Tests**
+### ✅ **Recently Fixed Tests (January 2025)**
 
-**Object Identity Issues:**
-- test_03__search_exact - Expects same object references
-- test_04__search_best - Object identity mismatch
-- test_11__unique_instance - Same prefix returns different objects
+**Object Identity Issues - NOW PASSING:**
+- ✅ test_03__search_exact - Object references now consistent
+- ✅ test_04__search_best - Object identity fixed
+- ✅ test_11__unique_instance - Same prefix returns same object
+- ✅ test_22_search_best - CIDR semantics fixed
+- ✅ test_16__bad_addresses - Input validation fixed
+
+### ⚠️ **Still Failing Tests**
 
 **Parent Relationships:**
-- test_31_parent - Parent-child relationships not properly maintained
+- ❌ test_31_parent - Parent-child relationships not implemented
 
 **Missing Features:**
-- test_18__iterator - Iterator not implemented
-- test_21__pickle - Pickle support not implemented
-- All tests in test_compat.py - Pickle compatibility
+- ❌ test_18__iterator - Iterator not implemented  
+- ❌ test_21__pickle - Pickle support not implemented
+- ❌ All tests in test_compat.py - Pickle compatibility
+- ❌ ~6 other tests that require iteration over tree
 
 ## GitHub Actions CI
 
@@ -212,18 +224,21 @@ result = tree.search_best("2001:db8::1")
 
 ## Future Development
 
-### High Priority
-1. **Fix Object Identity** - Implement node caching/reuse for consistent references
-2. **Implement Iterator** - Enable `for node in tree:` syntax
-3. **Parent Relationships** - Proper tree structure with parent links
+### High Priority  
+1. **Implement Iterator** - Enable `for node in tree:` syntax (affects ~6 tests)
+2. **Parent Relationships** - Proper tree structure with parent links (affects ~2 tests)
+
+### Completed ✅
+1. **~~Fix Object Identity~~** - ✅ COMPLETED: Node caching/reuse implemented 
+2. **~~CIDR Search Semantics~~** - ✅ COMPLETED: Proper address vs prefix search
+3. **~~Input Validation~~** - ✅ COMPLETED: Proper error handling for invalid inputs
 
 ### Medium Priority
 1. **Pickle Support** - Serialization compatibility with original
-2. **CIDR Search Semantics** - Match original behavior exactly
-3. **Memory Optimization** - Further reduce memory footprint
+2. **Memory Optimization** - Further reduce memory footprint
 
-### Low Priority
-1. **Delete Operations** - Currently not implemented
+### Low Priority  
+1. **Type Name Compatibility** - Show `radix.RadixNode` instead of `builtins.RadixNode`
 2. **Advanced Features** - Tree modification tracking, generation IDs
 
 ## Dependencies

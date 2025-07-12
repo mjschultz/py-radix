@@ -1,11 +1,16 @@
 use pyo3::prelude::*;
-use pyo3::exceptions::PyValueError;
+use pyo3::exceptions::{PyValueError, PyKeyError, PyTypeError};
 use std::collections::HashMap;
 use std::net::IpAddr;
 use std::str::FromStr;
 
 use crate::prefix::Prefix;
 use crate::node::RadixNode;
+
+enum SearchTarget {
+    Address(IpAddr),
+    Prefix(Prefix),
+}
 
 #[pyclass]
 pub struct RadixTree {
@@ -26,7 +31,7 @@ impl RadixTree {
         &mut self,
         py: Python,
         network: Option<String>,
-        masklen: Option<u8>,
+        masklen: Option<i32>,
         packed: Option<Vec<u8>>,
     ) -> PyResult<PyObject> {
         let prefix = match (network, masklen, packed) {
@@ -35,15 +40,25 @@ impl RadixTree {
                 Prefix::from_str(&net)?
             }
             (Some(net), Some(mask), None) => {
-                // Separate network and masklen
-                Prefix::from_network_masklen(&net, mask)?
+                // Separate network and masklen - validate range first
+                if mask < 0 || mask > 255 {
+                    return Err(PyValueError::new_err(
+                        format!("Invalid prefix length: {}", mask)
+                    ));
+                }
+                Prefix::from_network_masklen(&net, mask as u8)?
             }
             (None, Some(mask), Some(packed_addr)) => {
-                // Packed address format
-                Prefix::from_packed(&packed_addr, mask)?
+                // Packed address format - validate range first
+                if mask < 0 || mask > 255 {
+                    return Err(PyValueError::new_err(
+                        format!("Invalid prefix length: {}", mask)
+                    ));
+                }
+                Prefix::from_packed(&packed_addr, mask as u8)?
             }
             _ => {
-                return Err(PyValueError::new_err(
+                return Err(PyTypeError::new_err(
                     "Must specify either network (with optional masklen) or packed address with masklen"
                 ));
             }
@@ -69,7 +84,7 @@ impl RadixTree {
     fn delete(
         &mut self,
         network: Option<String>,
-        masklen: Option<u8>,
+        masklen: Option<i32>,
         packed: Option<Vec<u8>>,
     ) -> PyResult<()> {
         let prefix = match (network, masklen, packed) {
@@ -77,10 +92,22 @@ impl RadixTree {
                 Prefix::from_str(&net)?
             }
             (Some(net), Some(mask), None) => {
-                Prefix::from_network_masklen(&net, mask)?
+                // Validate range first
+                if mask < 0 || mask > 255 {
+                    return Err(PyValueError::new_err(
+                        format!("Invalid prefix length: {}", mask)
+                    ));
+                }
+                Prefix::from_network_masklen(&net, mask as u8)?
             }
             (None, Some(mask), Some(packed_addr)) => {
-                Prefix::from_packed(&packed_addr, mask)?
+                // Validate range first
+                if mask < 0 || mask > 255 {
+                    return Err(PyValueError::new_err(
+                        format!("Invalid prefix length: {}", mask)
+                    ));
+                }
+                Prefix::from_packed(&packed_addr, mask as u8)?
             }
             _ => {
                 return Err(PyValueError::new_err(
@@ -95,7 +122,7 @@ impl RadixTree {
         if self.py_nodes.remove(&key).is_some() {
             Ok(())
         } else {
-            Err(PyValueError::new_err("Node not found"))
+            Err(PyKeyError::new_err("match not found"))
         }
     }
     
@@ -104,7 +131,7 @@ impl RadixTree {
         &self,
         py: Python,
         network: Option<String>,
-        masklen: Option<u8>,
+        masklen: Option<i32>,
         packed: Option<Vec<u8>>,
     ) -> PyResult<Option<PyObject>> {
         let prefix = match (network, masklen, packed) {
@@ -112,10 +139,22 @@ impl RadixTree {
                 Prefix::from_str(&net)?
             }
             (Some(net), Some(mask), None) => {
-                Prefix::from_network_masklen(&net, mask)?
+                // Validate range first
+                if mask < 0 || mask > 255 {
+                    return Err(PyValueError::new_err(
+                        format!("Invalid prefix length: {}", mask)
+                    ));
+                }
+                Prefix::from_network_masklen(&net, mask as u8)?
             }
             (None, Some(mask), Some(packed_addr)) => {
-                Prefix::from_packed(&packed_addr, mask)?
+                // Validate range first
+                if mask < 0 || mask > 255 {
+                    return Err(PyValueError::new_err(
+                        format!("Invalid prefix length: {}", mask)
+                    ));
+                }
+                Prefix::from_packed(&packed_addr, mask as u8)?
             }
             _ => {
                 return Err(PyValueError::new_err(
@@ -137,19 +176,22 @@ impl RadixTree {
         network: Option<String>,
         packed: Option<Vec<u8>>,
     ) -> PyResult<Option<PyObject>> {
-        let addr = match (network, packed) {
+        let search_target = match (network, packed) {
             (Some(net), None) => {
                 // Try to parse as CIDR first, then as IP address
                 if net.contains('/') {
-                    let prefix = Prefix::from_str(&net)?;
-                    prefix.network_addr()
+                    // For CIDR notation, we need to find prefixes that contain the entire range
+                    let search_prefix = Prefix::from_str(&net)?;
+                    SearchTarget::Prefix(search_prefix)
                 } else {
-                    IpAddr::from_str(&net)
-                        .map_err(|e| PyValueError::new_err(format!("Invalid IP address: {}", e)))?
+                    // For IP address, find prefixes that contain this address
+                    let addr = IpAddr::from_str(&net)
+                        .map_err(|e| PyValueError::new_err(format!("Invalid IP address: {}", e)))?;
+                    SearchTarget::Address(addr)
                 }
             }
             (None, Some(packed_addr)) => {
-                match packed_addr.len() {
+                let addr = match packed_addr.len() {
                     4 => {
                         let bytes: [u8; 4] = packed_addr.try_into()
                             .map_err(|_| PyValueError::new_err("Invalid IPv4 packed address"))?;
@@ -161,7 +203,8 @@ impl RadixTree {
                         IpAddr::V6(std::net::Ipv6Addr::from(bytes))
                     }
                     _ => return Err(PyValueError::new_err("Packed address must be 4 or 16 bytes")),
-                }
+                };
+                SearchTarget::Address(addr)
             }
             _ => {
                 return Err(PyValueError::new_err(
@@ -175,7 +218,18 @@ impl RadixTree {
         
         for (key, py_node) in &self.py_nodes {
             let node_ref = py_node.bind(py).borrow();
-            if node_ref.prefix.contains(&addr) && node_ref.prefix.prefix_len >= best_len {
+            let matches = match &search_target {
+                SearchTarget::Address(addr) => {
+                    // For address search, find prefixes that contain this address
+                    node_ref.prefix.contains(addr)
+                }
+                SearchTarget::Prefix(search_prefix) => {
+                    // For prefix search, find prefixes that contain the entire search prefix
+                    node_ref.prefix.contains_prefix(search_prefix)
+                }
+            };
+            
+            if matches && node_ref.prefix.prefix_len >= best_len {
                 best_match = Some(key);
                 best_len = node_ref.prefix.prefix_len;
             }
@@ -191,19 +245,22 @@ impl RadixTree {
         network: Option<String>,
         packed: Option<Vec<u8>>,
     ) -> PyResult<Option<PyObject>> {
-        let addr = match (network, packed) {
+        let search_target = match (network, packed) {
             (Some(net), None) => {
                 // Try to parse as CIDR first, then as IP address
                 if net.contains('/') {
-                    let prefix = Prefix::from_str(&net)?;
-                    prefix.network_addr()
+                    // For CIDR notation, we need to find prefixes that contain the entire range
+                    let search_prefix = Prefix::from_str(&net)?;
+                    SearchTarget::Prefix(search_prefix)
                 } else {
-                    IpAddr::from_str(&net)
-                        .map_err(|e| PyValueError::new_err(format!("Invalid IP address: {}", e)))?
+                    // For IP address, find prefixes that contain this address
+                    let addr = IpAddr::from_str(&net)
+                        .map_err(|e| PyValueError::new_err(format!("Invalid IP address: {}", e)))?;
+                    SearchTarget::Address(addr)
                 }
             }
             (None, Some(packed_addr)) => {
-                match packed_addr.len() {
+                let addr = match packed_addr.len() {
                     4 => {
                         let bytes: [u8; 4] = packed_addr.try_into()
                             .map_err(|_| PyValueError::new_err("Invalid IPv4 packed address"))?;
@@ -215,7 +272,8 @@ impl RadixTree {
                         IpAddr::V6(std::net::Ipv6Addr::from(bytes))
                     }
                     _ => return Err(PyValueError::new_err("Packed address must be 4 or 16 bytes")),
-                }
+                };
+                SearchTarget::Address(addr)
             }
             _ => {
                 return Err(PyValueError::new_err(
@@ -229,7 +287,18 @@ impl RadixTree {
         
         for (key, py_node) in &self.py_nodes {
             let node_ref = py_node.bind(py).borrow();
-            if node_ref.prefix.contains(&addr) && node_ref.prefix.prefix_len <= worst_len {
+            let matches = match &search_target {
+                SearchTarget::Address(addr) => {
+                    // For address search, find prefixes that contain this address
+                    node_ref.prefix.contains(addr)
+                }
+                SearchTarget::Prefix(search_prefix) => {
+                    // For prefix search, find prefixes that contain the entire search prefix
+                    node_ref.prefix.contains_prefix(search_prefix)
+                }
+            };
+            
+            if matches && node_ref.prefix.prefix_len <= worst_len {
                 worst_match = Some(key);
                 worst_len = node_ref.prefix.prefix_len;
             }
@@ -243,7 +312,7 @@ impl RadixTree {
         &self,
         py: Python,
         network: Option<String>,
-        masklen: Option<u8>,
+        masklen: Option<i32>,
         packed: Option<Vec<u8>>,
     ) -> PyResult<Vec<PyObject>> {
         let prefix = match (network, masklen, packed) {
@@ -251,10 +320,22 @@ impl RadixTree {
                 Prefix::from_str(&net)?
             }
             (Some(net), Some(mask), None) => {
-                Prefix::from_network_masklen(&net, mask)?
+                // Validate range first
+                if mask < 0 || mask > 255 {
+                    return Err(PyValueError::new_err(
+                        format!("Invalid prefix length: {}", mask)
+                    ));
+                }
+                Prefix::from_network_masklen(&net, mask as u8)?
             }
             (None, Some(mask), Some(packed_addr)) => {
-                Prefix::from_packed(&packed_addr, mask)?
+                // Validate range first
+                if mask < 0 || mask > 255 {
+                    return Err(PyValueError::new_err(
+                        format!("Invalid prefix length: {}", mask)
+                    ));
+                }
+                Prefix::from_packed(&packed_addr, mask as u8)?
             }
             _ => {
                 return Err(PyValueError::new_err(
@@ -287,7 +368,7 @@ impl RadixTree {
         &self,
         py: Python,
         network: Option<String>,
-        masklen: Option<u8>,
+        masklen: Option<i32>,
         packed: Option<Vec<u8>>,
     ) -> PyResult<Vec<PyObject>> {
         let prefix = match (network, masklen, packed) {
@@ -295,10 +376,22 @@ impl RadixTree {
                 Prefix::from_str(&net)?
             }
             (Some(net), Some(mask), None) => {
-                Prefix::from_network_masklen(&net, mask)?
+                // Validate range first
+                if mask < 0 || mask > 255 {
+                    return Err(PyValueError::new_err(
+                        format!("Invalid prefix length: {}", mask)
+                    ));
+                }
+                Prefix::from_network_masklen(&net, mask as u8)?
             }
             (None, Some(mask), Some(packed_addr)) => {
-                Prefix::from_packed(&packed_addr, mask)?
+                // Validate range first
+                if mask < 0 || mask > 255 {
+                    return Err(PyValueError::new_err(
+                        format!("Invalid prefix length: {}", mask)
+                    ));
+                }
+                Prefix::from_packed(&packed_addr, mask as u8)?
             }
             _ => {
                 return Err(PyValueError::new_err(
@@ -316,11 +409,11 @@ impl RadixTree {
             }
         }
         
-        // Sort by prefix length (shortest first)
+        // Sort by prefix length (longest first - most specific first)
         covering.sort_by(|a: &PyObject, b: &PyObject| {
             let a_node = a.extract::<PyRef<RadixNode>>(py).unwrap();
             let b_node = b.extract::<PyRef<RadixNode>>(py).unwrap();
-            a_node.prefix.prefix_len.cmp(&b_node.prefix.prefix_len)
+            b_node.prefix.prefix_len.cmp(&a_node.prefix.prefix_len)
         });
         
         Ok(covering)
@@ -334,39 +427,41 @@ impl RadixTree {
         self.py_nodes.keys().cloned().collect()
     }
     
-    // TODO: Fix iterator implementation
-    // fn __iter__(slf: PyRef<Self>, py: Python) -> PyResult<RadixIterator> {
-    //     let nodes: Vec<String> = slf.nodes.keys().cloned().collect();
-    //     Ok(RadixIterator { tree: slf.into(), nodes, index: 0 })
-    // }
+    fn __iter__(&self, py: Python) -> PyResult<RadixIterator> {
+        // Sort by prefix to ensure consistent ordering
+        let mut sorted_entries: Vec<_> = self.py_nodes.iter().collect();
+        sorted_entries.sort_by_key(|(prefix, _)| prefix.as_str());
+        
+        let nodes: Vec<PyObject> = sorted_entries.into_iter()
+            .map(|(_, py_node)| py_node.clone_ref(py).into())
+            .collect();
+        Ok(RadixIterator { nodes, index: 0 })
+    }
     
     fn __len__(&self) -> usize {
         self.py_nodes.len()
     }
 }
 
-// TODO: Fix iterator implementation
-// #[pyclass]
-// pub struct RadixIterator {
-//     tree: Py<RadixTree>,
-//     nodes: Vec<String>,
-//     index: usize,
-// }
+#[pyclass]
+pub struct RadixIterator {
+    nodes: Vec<PyObject>,
+    index: usize,
+}
 
-// #[pymethods]
-// impl RadixIterator {
-//     fn __iter__(slf: PyRef<Self>) -> PyRef<Self> {
-//         slf
-//     }
+#[pymethods]
+impl RadixIterator {
+    fn __iter__(slf: PyRef<Self>) -> PyRef<Self> {
+        slf
+    }
     
-//     fn __next__(mut slf: PyRefMut<Self>, py: Python) -> PyResult<Option<RadixNode>> {
-//         if slf.index < slf.nodes.len() {
-//             let key = &slf.nodes[slf.index];
-//             slf.index += 1;
-//             let tree = slf.tree.bind(py);
-//             Ok(tree.nodes.get(key).map(|node| node.clone_for_return(py)))
-//         } else {
-//             Ok(None)
-//         }
-//     }
-// }
+    fn __next__(mut slf: PyRefMut<Self>, py: Python) -> PyResult<Option<PyObject>> {
+        if slf.index < slf.nodes.len() {
+            let node = slf.nodes[slf.index].clone_ref(py);
+            slf.index += 1;
+            Ok(Some(node))
+        } else {
+            Ok(None)
+        }
+    }
+}
