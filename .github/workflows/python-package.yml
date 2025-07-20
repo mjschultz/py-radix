@@ -69,7 +69,7 @@ jobs:
     - name: store the dist
       uses: actions/upload-artifact@v4
       with:
-        name: python-package-distributions
+        name: python-package-dist-${{ matrix.python-version }}
         path: dist/
 
   publish-to-pypi:
@@ -88,7 +88,8 @@ jobs:
     - name: Download all the dists
       uses: actions/download-artifact@v4
       with:
-        name: python-package-distributions
+        name: python-package-dist-
+        merge-multiple: true
         path: dist/
     - name: Publish distribution 📦 to PyPI
       uses: pypa/gh-action-pypi-publish@release/v1
@@ -110,7 +111,8 @@ jobs:
     - name: Download all the dists
       uses: actions/download-artifact@v4
       with:
-        name: python-package-distributions
+        name: python-package-dist-
+        merge-multiple: true
         path: dist/
     - name: Publish distribution 📦 to TestPyPI
       uses: pypa/gh-action-pypi-publish@release/v1
