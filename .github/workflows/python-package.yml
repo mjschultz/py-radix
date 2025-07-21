@@ -74,7 +74,7 @@ jobs:
     - name: Download all the dists
       uses: actions/download-artifact@v4
       with:
-        name: python-package-dist-
+        pattern: python-package-dist-*
         merge-multiple: true
         path: dist/
     - name: Publish distribution 📦 to PyPI
@@ -97,7 +97,7 @@ jobs:
     - name: Download all the dists
       uses: actions/download-artifact@v4
       with:
-        name: python-package-dist-
+        pattern: python-package-dist-*
         merge-multiple: true
         path: dist/
     - name: Publish distribution 📦 to TestPyPI
