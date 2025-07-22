@@ -6,6 +6,7 @@ import os
 
 from datetime import datetime, timezone
 from setuptools import setup, find_packages, Extension
+from setuptools.dist import Version
 from os.path import abspath, dirname, join
 
 here = abspath(dirname(__file__))
@@ -28,10 +29,9 @@ if not IS_PYPY and not RADIX_NO_EXT:
     extra_kwargs['ext_modules'] = [radix]
 
 # get version from build
-VERSION = os.environ.get('VERSION')
-if VERSION:
-    version = VERSION.split('/')[-1]
-else:
+try:
+    version = str(Version(os.environ.get('VERSION')))
+except Exception:
     now = datetime.now(timezone.utc)
     version = now.strftime('%Y.%m.%d.%H.%M-dev')
 
