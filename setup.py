@@ -30,14 +30,12 @@ if not IS_PYPY and not RADIX_NO_EXT:
 # get version from build
 VERSION = os.environ.get('VERSION')
 if VERSION:
-    version = VERSION
+    version = VERSION.split('/')[-1]
 else:
     now = datetime.now(timezone.utc)
     version = now.strftime('%Y.%m.%d.%H.%M-dev')
 
-
 tests_require = ['nose', 'coverage']
-
 
 setup(
     name='py-radix',
