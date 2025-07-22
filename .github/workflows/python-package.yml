@@ -89,6 +89,7 @@ jobs:
     environment:
       name: testpypi
       url: https://test.pypi.org/p/py-radix-test/
+      verbose: true
 
     permissions:
       id-token: write
@@ -103,4 +104,5 @@ jobs:
     - name: Publish distribution 📦 to TestPyPI
       uses: pypa/gh-action-pypi-publish@release/v1
       with:
+        verbose: true
         repository-url: https://test.pypi.org/legacy/
