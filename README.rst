@@ -114,6 +114,13 @@ A simple example that demonstrates most of the features: ::
   		print rnode.prefix
 
 
+Release
+-------
+
+Github Actions should automatically publish tags of the form
+`version/<version>` to PyPI upon successful build. Versioning should follow
+semantic version conventions.
+
 License
 -------
 

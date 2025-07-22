@@ -7,10 +7,15 @@ on:
   push:
     branches:
     - main
+    tags:
+    - version/*
   pull_request:
     branches:
     - main
   workflow_dispatch:
+
+env:
+  VERSION: ${{ github.ref_name }}
 
 jobs:
   build:
@@ -18,31 +23,17 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        os: [ubuntu-20.04, ubuntu-24.04]
-        python-version: ['3.6', '3.7', '3.8', '3.9', '3.10', '3.11', '3.12', '3.13', '3.14.0-alpha.1', 'pypy3.9', 'pypy3.10']
-        exclude:
-        - os: ubuntu-24.04
-          python-version: 3.6
-        - os: ubuntu-24.04
-          python-version: 3.7
-        - os: ubuntu-20.04
-          python-version: 3.8
-        - os: ubuntu-20.04
-          python-version: 3.9
-        - os: ubuntu-20.04
-          python-version: 3.10
-        - os: ubuntu-20.04
-          python-version: 3.11
-        - os: ubuntu-20.04
-          python-version: 3.12
-        - os: ubuntu-20.04
-          python-version: 3.13
-        - os: ubuntu-20.04
-          python-version: 3.14.0-alpha.1
-        - os: ubuntu-20.04
-          python-version: pypy3.9
-        - os: ubuntu-20.04
-          python-version: pypy3.10
+        os:
+        - ubuntu-24.04
+        python-version: 
+        - '3.9'
+        - '3.10'
+        - '3.11'
+        - '3.12'
+        - '3.13'
+        - '3.14.0-beta.4'
+        - 'pypy3.9'
+        - 'pypy3.10'
     steps:
     - uses: actions/checkout@v4
     - name: Set up Python ${{ matrix.python-version }}
@@ -52,15 +43,44 @@ jobs:
     - name: Install dependencies
       run: |
         python -m pip install --upgrade pip
-        python -m pip install flake8 pytest
+        python -m pip install flake8 pytest build
         if [ -f requirements.txt ]; then pip install -r requirements.txt; fi
     - name: Lint with flake8
       run: |
         # Stop the build if there are Python syntax errors or undefined names
-        flake8 . --count --select=E9,F63,F7,F82 --show-source --statistics
+        flake8 radix --count --select=E9,F63,F7,F82 --show-source --statistics
         # For now, ignore the single occurrence of E741 in _prefix_match(),
         # ignore W503 in favor of PEP 8 suggesting Knuth's style, accept the
         # max. complexity of 23 for RadixTree.add() - and just fail otherwise
-        flake8 . --count --ignore=E741,W503 --max-complexity=23 --max-line-length=127 --statistics
+        flake8 radix --count --ignore=E741,W503 --max-complexity=23 --max-line-length=127 --statistics
     - name: Test with pytest
       run: pytest -v
+    - name: Build the package
+      run: python -m build
+    - name: store the dist
+      uses: actions/upload-artifact@v4
+      with:
+        name: python-package-dist-${{ matrix.python-version }}
+        path: dist/
+
+  publish-to-pypi:
+    name: Publish Python 🐍 distribution 📦 to PyPI
+    if: startsWith(github.ref, 'refs/tags/version/')
+    needs:
+    - build
+    runs-on: ubuntu-latest
+
+    environment:
+      name: pypi
+      url: https://pypi.org/p/py-radix/
+    permissions:
+      id-token: write
+    steps:
+    - name: Download all the dists
+      uses: actions/download-artifact@v4
+      with:
+        pattern: python-package-dist-*
+        merge-multiple: true
+        path: dist/
+    - name: Publish distribution 📦 to PyPI
+      uses: pypa/gh-action-pypi-publish@release/v1

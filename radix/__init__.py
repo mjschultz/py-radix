@@ -3,7 +3,7 @@ try:
 except Exception:
     from .radix import Radix as _Radix
 
-__version__ = '0.10.0'
+__version__ = 'deprecated; use importlib.metadata.version()'
 __all__ = ['Radix']
 
 
