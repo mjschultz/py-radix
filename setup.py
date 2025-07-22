@@ -4,6 +4,7 @@ import codecs
 import sys
 import os
 
+from datetime import datetime, timezone
 from setuptools import setup, find_packages, Extension
 from os.path import abspath, dirname, join
 
@@ -26,13 +27,21 @@ if not IS_PYPY and not RADIX_NO_EXT:
                       include_dirs=[join(here, 'radix')])
     extra_kwargs['ext_modules'] = [radix]
 
+# get version from build
+VERSION = os.environ.get('VERSION')
+if VERSION:
+    version = VERSION
+else:
+    now = datetime.now(timezone.utc)
+    version = now.strftime('%Y.%m.%d.%H.%M-dev')
+
 
 tests_require = ['nose', 'coverage']
 
 
 setup(
     name='py-radix',
-    version='0.11.0',
+    version=version,
     maintainer='Michael J. Schultz',
     maintainer_email='mjschultz@gmail.com',
     url='https://github.com/mjschultz/py-radix',
@@ -46,14 +55,11 @@ setup(
         'Topic :: System :: Networking',
         'License :: OSI Approved :: BSD License',
         'Programming Language :: Python :: 3',
-        'Programming Language :: Python :: 3.6',
-        'Programming Language :: Python :: 3.7',
-        'Programming Language :: Python :: 3.8',
         'Programming Language :: Python :: 3.9',
         'Programming Language :: Python :: 3.10',
         'Programming Language :: Python :: 3.11',
         'Programming Language :: Python :: 3.12',
-        'Programming Language :: Python :: 3.13'
+        'Programming Language :: Python :: 3.13',
     ],
     tests_require=tests_require,
     packages=find_packages(exclude=['tests', 'tests.*']),
