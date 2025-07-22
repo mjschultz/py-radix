@@ -89,7 +89,6 @@ jobs:
     environment:
       name: testpypi
       url: https://test.pypi.org/p/py-radix-test/
-      verbose: true
 
     permissions:
       id-token: write
