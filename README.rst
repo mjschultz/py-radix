@@ -32,6 +32,10 @@ want the C extension, set the environment variable ``RADIX_NO_EXT=1``.
 Tests are in the ``tests/`` directory and can be run with
 ``python setup.py nosetests``.
 
+Windows
+^^^^^^^
+Windows support depends on a third-party library--`win-inet-pton`--to provide `inet_pton` and `inet_ntop` wrappers for the socket library. It is automatically included for installations on the Windows platform.
+
 Usage
 -----
 
