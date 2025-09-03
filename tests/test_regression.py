@@ -37,6 +37,10 @@ class TestRadix(unittest.TestCase):
         'PyPy' == platform.python_implementation(),
         'PyPy has no refcounts'
     )
+    @unittest.skipIf(
+        sys.version_info >= (3, 12),
+        'None is immortal with a very large refcount in 3.12 and newer'
+    )
     def test_000_check_incref(self):
         tree = radix.Radix()
         node = tree.add('10.0.1.0/24')
