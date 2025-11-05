@@ -9,6 +9,9 @@ from setuptools import setup, find_packages, Extension
 from subprocess import Popen, PIPE
 from os.path import abspath, dirname, join
 
+# specify the version
+version = 'v1.0.2'
+
 here = abspath(dirname(__file__))
 
 # determine the python version
@@ -28,21 +31,18 @@ if not IS_PYPY and not RADIX_NO_EXT:
                       include_dirs=[join(here, 'radix')])
     extra_kwargs['ext_modules'] = [radix]
 
-# generate a hash based version for default
-try:
-    process = Popen(
-        ['git', 'rev-parse', '--short', 'HEAD'],
-        shell=False,
-        stdout=PIPE
-    )
-    version = process.communicate()[0].decode('utf8').strip()
-except Exception:
-    version = 'unknown'
-finally:
-    version = f'v0.1+{version}'
-
-# let the env specify a version
-version = os.environ.get('VERSION', version)
+# if we're not building in a v-tag == version + the version
+if os.environ.get('VERSION') != version:
+    try:
+        process = Popen(
+            ['git', 'rev-parse', '--short', 'HEAD'],
+            shell=False,
+            stdout=PIPE
+        )
+        rev = process.communicate()[0].decode('utf8').strip()
+    except Exception:
+        rev = 'unknown'
+    version = f'{version}+dev-{version}'
 
 tests_require = ['nose', 'coverage']
 
