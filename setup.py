@@ -7,6 +7,7 @@ import os
 from datetime import datetime, timezone
 from setuptools import setup, find_packages, Extension
 from setuptools.dist import Version
+from subprocess import Popen, PIPE
 from os.path import abspath, dirname, join
 
 here = abspath(dirname(__file__))
@@ -32,8 +33,16 @@ if not IS_PYPY and not RADIX_NO_EXT:
 try:
     version = str(Version(os.environ.get('VERSION')))
 except Exception:
-    now = datetime.now(timezone.utc)
-    version = now.strftime('%Y.%m.%d.%H.%M-dev')
+    try:
+        process = Popen(
+            ['git', 'rev-parse', '--short', 'HEAD'],
+            shell=False,
+            stdout=PIPE
+        )
+        version = process.communicate()[0].strip()
+    except Exception:
+        version = 'unknown-hash'
+    version = f'dev-{version}'
 
 tests_require = ['nose', 'coverage']
 
