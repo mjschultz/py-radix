@@ -76,27 +76,13 @@ jobs:
           - os: macos-arm
             # macos-14+ (including latest) are ARM64 runners
             runs-on: macos-latest
-          - os: android-intel
-            runs-on: ubuntu-latest
-            platform: android
-          - os: android-arm
-            # GitHub Actions doesn’t currently support the Android emulator on any ARM
-            # runner. So we build on a non-ARM runner, which will skip the tests.
-            runs-on: ubuntu-latest
-            platform: android
-            archs: arm64_v8a
-          - os: ios
-            runs-on: macos-latest
-            platform: ios
-          - os: pyodide
-            runs-on: ubuntu-latest
-            platform: pyodide
     steps:
       - uses: actions/checkout@v4
 
       - name: Build wheels
         uses: pypa/cibuildwheel@v3.2.1
         env:
+          CIBW_SKIP: "cp38-* *_ppc64le *_s390x *_riscv64"
           CIBW_PLATFORM: ${{ matrix.platform || 'auto' }}
           CIBW_ARCHS: ${{ matrix.archs || 'auto' }}
           CIBW_ENVIRONMENT_PASS_LINUX: VERSION
