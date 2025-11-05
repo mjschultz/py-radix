@@ -7,16 +7,15 @@ on:
   push:
     branches:
     - main
+    tags:
+    - v**
   pull_request:
     branches:
     - main
-  release:
-    types:
-    - published
   workflow_dispatch:
 
 env:
-  VERSION: ${{ github.ref_name }}
+  REF_NAME: ${{ github.ref_name }}
 
 jobs:
   test:
@@ -123,7 +122,7 @@ jobs:
 
   publish-to-pypi:
     name: Publish Python 🐍 distribution 📦 to PyPI
-    if: github.event_name == 'release' && github.event.action == 'published'
+    if: startsWith(github.ref, 'refs/tags/v')
     needs:
     - build-wheels
     - build-sdist
