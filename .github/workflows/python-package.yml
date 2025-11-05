@@ -89,6 +89,8 @@ jobs:
           - os: pyodide
             runs-on: ubuntu-latest
             platform: pyodide
+    steps:
+      - uses: actions/checkout@v4
 
       - name: Build wheels
         uses: pypa/cibuildwheel@v3.2.1
