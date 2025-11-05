@@ -6,8 +6,11 @@ import os
 
 from datetime import datetime, timezone
 from setuptools import setup, find_packages, Extension
-from setuptools.dist import Version
+from subprocess import Popen, PIPE
 from os.path import abspath, dirname, join
+
+# specify the version
+version = 'v1.0.2'
 
 here = abspath(dirname(__file__))
 
@@ -28,12 +31,18 @@ if not IS_PYPY and not RADIX_NO_EXT:
                       include_dirs=[join(here, 'radix')])
     extra_kwargs['ext_modules'] = [radix]
 
-# get version from build
-try:
-    version = str(Version(os.environ.get('VERSION')))
-except Exception:
-    now = datetime.now(timezone.utc)
-    version = now.strftime('%Y.%m.%d.%H.%M-dev')
+# if we're not building in a v-tag == version + the version
+if os.environ.get('VERSION') != version:
+    try:
+        process = Popen(
+            ['git', 'rev-parse', '--short', 'HEAD'],
+            shell=False,
+            stdout=PIPE
+        )
+        rev = process.communicate()[0].decode('utf8').strip()
+    except Exception:
+        rev = 'unknown'
+    version = f'{version}+dev-{version}'
 
 tests_require = ['nose', 'coverage']
 
