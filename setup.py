@@ -22,28 +22,6 @@ RADIX_NO_EXT = True if RADIX_NO_EXT not in ('0', 'false', 'False') else False
 with codecs.open(join(here, 'README.rst'), encoding='utf-8') as f:
     README = f.read()
 
-# introduce some extra setup_args if Python 2.x
-extra_kwargs = {}
-if not IS_PYPY and not RADIX_NO_EXT:
-    sources = ['radix/_radix.c', 'radix/_radix/radix.c']
-    radix = Extension('radix._radix',
-                      sources=sources,
-                      include_dirs=[join(here, 'radix')])
-    extra_kwargs['ext_modules'] = [radix]
-
-# if we're not building in a v-tag == version + the version
-if os.environ.get('VERSION') != version:
-    try:
-        process = Popen(
-            ['git', 'rev-parse', '--short', 'HEAD'],
-            shell=False,
-            stdout=PIPE
-        )
-        rev = process.communicate()[0].decode('utf8').strip()
-    except Exception:
-        rev = 'unknown'
-    version = f'{version}+dev-{version}'
-
 tests_require = ['nose', 'coverage']
 
 setup(
