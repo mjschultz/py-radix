@@ -39,7 +39,7 @@ try:
 except Exception:
     version = 'unknown'
 finally:
-    version = f'dev-{version}'
+    version = f'v0.1+{version}'
 
 # let the env specify a version
 version = os.environ.get('VERSION', version)

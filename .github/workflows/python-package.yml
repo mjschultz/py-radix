@@ -16,7 +16,7 @@ env:
   VERSION: ${{ github.ref_name }}
 
 jobs:
-  build:
+  test:
     runs-on: ${{ matrix.os }}
     strategy:
       fail-fast: false
