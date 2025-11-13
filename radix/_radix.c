@@ -36,6 +36,12 @@
 # define Py_TYPE(ob)    (((PyObject*)(ob))->ob_type)
 #endif
 
+/* Critical sections are defined in the C API in Python 3.13 and newer */
+#if PY_VERSION_HEX < 0x030D0000
+  #  define Py_BEGIN_CRITICAL_SECTION(op) {
+  #  define Py_END_CRITICAL_SECTION() }
+#endif
+
 /* Prototypes */
 struct _RadixObject;
 struct _RadixIterObject;
@@ -118,8 +124,9 @@ RadixNode_dealloc(RadixNodeObject *self)
 static PyObject *
 Radix_parent(RadixNodeObject *self, void *closure)
 {
-        PyObject *ret;
+        PyObject *ret = Py_None;
         radix_node_t *node;
+        Py_BEGIN_CRITICAL_SECTION(self);
         node = self->rn;
         /* walk up through parent to find parent node with data */
         for ( ; ; )
@@ -130,14 +137,15 @@ Radix_parent(RadixNodeObject *self, void *closure)
                         if (node->data)
                         {
                                 ret = node->data;
-                                Py_XINCREF(ret);
-                                return ret;
+                                break;
                         }
                 }
                 else
                         break;
         }
-        Py_RETURN_NONE;
+        Py_END_CRITICAL_SECTION();
+        Py_XINCREF(ret);
+        return ret;
 }
 static PyMemberDef RadixNode_members[] = {
         {"data",        T_OBJECT, offsetof(RadixNodeObject, user_attr), READONLY},
@@ -361,7 +369,9 @@ Radix_add(RadixObject *self, PyObject *args, PyObject *kw_args)
         if ((prefix = args_to_prefix(NULL, addr, packed, packlen, prefixlen)) == NULL)
                 return NULL;
 
+        Py_BEGIN_CRITICAL_SECTION((PyObject *)self);
         node_obj = create_add_node(self, prefix);
+        Py_END_CRITICAL_SECTION();
         Deref_Prefix(prefix);
 
         return node_obj;
@@ -383,27 +393,36 @@ Radix_delete(RadixObject *self, PyObject *args, PyObject *kw_args)
         char *addr = NULL, *packed = NULL;
         long prefixlen = -1;
         Py_ssize_t packlen = -1;
+        PyObject *ret = Py_None;
 
         if (!PyArg_ParseTupleAndKeywords(args, kw_args, "|zlz#:delete", keywords,
             &addr, &prefixlen, &packed, &packlen))
                 return NULL;
         if ((prefix = args_to_prefix(&lprefix, addr, packed, packlen, prefixlen)) == NULL)
                 return NULL;
+
+        Py_BEGIN_CRITICAL_SECTION(self);
         if ((node = radix_search_exact(self->rt, prefix)) == NULL) {
                 PyErr_SetString(PyExc_KeyError, "no such address");
-                return NULL;
+                ret = NULL;
         }
-        if (node->data != NULL) {
-                node_obj = node->data;
-                node_obj->rn = NULL;
-                Py_XDECREF(node_obj);
+        if (ret != NULL) {
+                if (node->data != NULL) {
+                        node_obj = node->data;
+                        node_obj->rn = NULL;
+                        Py_XDECREF(node_obj);
+                }
+
+                radix_remove(self->rt, node);
+        }
+        Py_END_CRITICAL_SECTION();
+
+        if (ret != NULL) {
+            self->gen_id++;
         }
 
-        radix_remove(self->rt, node);
-
-        self->gen_id++;
-        Py_INCREF(Py_None);
-        return Py_None;
+        Py_XINCREF(ret);
+        return ret;
 }
 
 PyDoc_STRVAR(Radix_search_exact_doc,
@@ -432,8 +451,9 @@ Radix_search_exact(RadixObject *self, PyObject *args, PyObject *kw_args)
                 return NULL;
         if ((prefix = args_to_prefix(&lprefix, addr, packed, packlen, prefixlen)) == NULL)
                 return NULL;
-
+        Py_BEGIN_CRITICAL_SECTION(self);
         node = radix_search_exact(self->rt, prefix);
+        Py_END_CRITICAL_SECTION();
         if (node == NULL || node->data == NULL) {
                 Py_INCREF(Py_None);
                 return Py_None;
@@ -470,9 +490,10 @@ Radix_search_best(RadixObject *self, PyObject *args, PyObject *kw_args)
                 return NULL;
         if ((prefix = args_to_prefix(&lprefix, addr, packed, packlen, prefixlen)) == NULL)
                 return NULL;
-
-        if ((node = radix_search_best(self->rt, prefix)) == NULL || 
-            node->data == NULL) {
+        Py_BEGIN_CRITICAL_SECTION(self);
+        node = radix_search_best(self->rt, prefix);
+        Py_END_CRITICAL_SECTION();
+        if (node == NULL || node->data == NULL) {
                 Py_INCREF(Py_None);
                 return Py_None;
         }
@@ -508,9 +529,10 @@ Radix_search_worst(RadixObject *self, PyObject *args, PyObject *kw_args)
                 return NULL;
         if ((prefix = args_to_prefix(&lprefix, addr, packed, packlen, prefixlen)) == NULL)
                 return NULL;
-
-        if ((node = radix_search_worst(self->rt, prefix)) == NULL || 
-            node->data == NULL) {
+        Py_BEGIN_CRITICAL_SECTION(self);
+        node = radix_search_worst(self->rt, prefix);
+        Py_END_CRITICAL_SECTION();
+        if (node == NULL || node->data == NULL) {
                 Py_INCREF(Py_None);
                 return Py_None;
         }
@@ -555,7 +577,9 @@ Radix_search_covered(RadixObject *self, PyObject *args, PyObject *kw_args)
         if ((ret = PyList_New(0)) == NULL)
                 return NULL;
 
+        Py_BEGIN_CRITICAL_SECTION(self);
         radix_search_covered(self->rt, prefix, add_node_to_list, ret, 1);
+        Py_END_CRITICAL_SECTION();
 
         return (ret);
 }
@@ -591,7 +615,9 @@ Radix_search_covering(RadixObject *self, PyObject *args, PyObject *kw_args)
                 return NULL;
         }
 
+        Py_BEGIN_CRITICAL_SECTION(self);
         radix_search_covering(self->rt, prefix, add_node_to_list, ret);
+        Py_END_CRITICAL_SECTION();
 
         return ret;
 }
@@ -615,10 +641,12 @@ Radix_nodes(RadixObject *self, PyObject *args)
         if ((ret = PyList_New(0)) == NULL)
                 return NULL;
 
+        Py_BEGIN_CRITICAL_SECTION(self);
         RADIX_TREE_WALK(self->rt, node) {
                 if (node->data != NULL)
                         PyList_Append(ret, (PyObject *)node->data);
         } RADIX_TREE_WALK_END;
+        Py_END_CRITICAL_SECTION();
 
         return (ret);
 }
@@ -642,12 +670,14 @@ Radix_prefixes(RadixObject *self, PyObject *args)
         if ((ret = PyList_New(0)) == NULL)
                 return NULL;
 
+        Py_BEGIN_CRITICAL_SECTION(self);
         RADIX_TREE_WALK(self->rt, node) {
                 if (node->data != NULL) {
                         PyList_Append(ret,
                             ((RadixNodeObject *)node->data)->prefix);
                 }
         } RADIX_TREE_WALK_END;
+        Py_END_CRITICAL_SECTION();
 
         return (ret);
 }
@@ -767,19 +797,21 @@ static PyObject *
 RadixIter_iternext(RadixIterObject *self)
 {
         radix_node_t *node;
-        PyObject *ret;
+        PyObject *ret = Py_None;
 
         if (self->gen_id != self->parent->gen_id) {
                 PyErr_SetString(PyExc_RuntimeWarning,
                     "Radix tree modified during iteration");
                 return (NULL);
         }
-
+        Py_BEGIN_CRITICAL_SECTION(self);
  again:
         if ((node = self->rn) == NULL) {
                 /* We have walked both trees */
-                if (self->af == AF_INET6)
-                        return NULL;
+                if (self->af == AF_INET6) {
+                        ret = NULL;
+                        goto done;
+                }
                 /* Otherwise reset and start walk of IPv6 tree */
                 self->sp = self->iterstack;
                 self->rn = self->parent->rt->head_ipv6;
@@ -801,13 +833,17 @@ RadixIter_iternext(RadixIterObject *self)
 
         if (node->prefix == NULL || node->data == NULL)
                 goto again;
+  done:
+        Py_END_CRITICAL_SECTION();
 
-        ret = node->data;
-        Py_INCREF(ret);
+        if (ret == Py_None) {
+                ret = node->data;
+        }
+        Py_XINCREF(ret);
         return (ret);
 }
 
-PyDoc_STRVAR(RadixIter_doc, 
+PyDoc_STRVAR(RadixIter_doc,
 "Radix tree iterator");
 
 static PyTypeObject RadixIter_Type = {
@@ -992,6 +1028,10 @@ static PyObject *module_initialize(void)
         m = PyModule_Create(&radix_module_def);
 #else
         m = Py_InitModule3("_radix", radix_methods, module_doc);
+#endif
+
+#if Py_GIL_DISABLED
+        PyUnstable_Module_SetGIL(m, Py_MOD_GIL_NOT_USED);
 #endif
 
         /* Stash the callable constructor for use in Radix.__reduce__ */
