@@ -833,7 +833,7 @@ RadixIter_iternext(RadixIterObject *self)
 
         if (node->prefix == NULL || node->data == NULL)
                 goto again;
-  done:
+  done:;
         Py_END_CRITICAL_SECTION();
 
         if (ret == Py_None) {
