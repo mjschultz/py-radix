@@ -415,11 +415,12 @@ Radix_delete(RadixObject *self, PyObject *args, PyObject *kw_args)
 
                 radix_remove(self->rt, node);
         }
-        Py_END_CRITICAL_SECTION();
 
         if (ret != NULL) {
             self->gen_id++;
         }
+
+        Py_END_CRITICAL_SECTION();
 
         Py_XINCREF(ret);
         return ret;
