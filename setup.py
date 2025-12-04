@@ -10,7 +10,7 @@ from subprocess import Popen, PIPE
 from os.path import abspath, dirname, join
 
 # specify the version
-version = 'v1.0.5'
+version = 'v1.1.0'
 
 here = abspath(dirname(__file__))
 
