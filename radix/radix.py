@@ -1,3 +1,6 @@
+import sys
+if sys.platform.startswith('win'):
+    import win_inet_pton
 from socket import (getaddrinfo, gaierror,
                     inet_pton, inet_ntop, AF_INET, AF_INET6, SOCK_RAW,
                     AI_NUMERICHOST)
