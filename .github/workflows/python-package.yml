@@ -101,7 +101,15 @@ jobs:
       - uses: actions/checkout@v5
 
       - name: Build sdist
+        env:
+          VERSION: ${{ github.ref_name }}
         run: pipx run build --sdist
+
+      - name: Verify release version
+        if: startsWith(github.ref, 'refs/tags/v')
+        run: |
+          test "${GITHUB_REF_NAME#v}" = "$(sed -n "s/^version = ['\"]v\(.*\)['\"]/\1/p" setup.py)"
+          test "${GITHUB_REF_NAME#v}" = "$(tar -xOzf dist/*.tar.gz --wildcards '*/PKG-INFO' | sed -n 's/^Version: //p')"
 
       - uses: actions/upload-artifact@v4
         with:
