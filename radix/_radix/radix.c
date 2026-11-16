@@ -795,6 +795,7 @@ prefix_t
         char save[256], *cp, *ep;
         struct addrinfo hints, *ai;
         void *addr;
+        prefix_t *result = NULL;
         size_t slen;
         int r;
 
@@ -854,12 +855,12 @@ prefix_t
                 goto out;
         }
 
-        ret = New_Prefix2(ai->ai_addr->sa_family, addr, len, ret);
-        if (ret == NULL)
+        result = New_Prefix2(ai->ai_addr->sa_family, addr, len, ret);
+        if (result == NULL)
                 *errmsg = "New_Prefix2 failed";
 out:
         freeaddrinfo(ai);
-        return (ret);
+        return (result);
 }
 
 prefix_t
